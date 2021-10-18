@@ -89,16 +89,17 @@ export const ChatService = {
     {
       try {
         const chatState = accessChatState().value
-        const messageResult = await client.service('message').find({
-          query: {
-            channelId: channelId,
-            $sort: {
-              createdAt: -1
-            },
-            $limit: limit != null ? limit : chatState.channels.channels[channelId].limit,
-            $skip: skip != null ? skip : chatState.channels.channels[channelId].skip
-          }
-        })
+        // const messageResult = await client.service('message').find({
+        //   query: {
+        //     channelId: channelId,
+        //     $sort: {
+        //       createdAt: -1
+        //     },
+        //     $limit: limit != null ? limit : chatState.channels.channels[0].limit,
+        //     $skip: skip != null ? skip : chatState.channels.channels[0].skip
+        //   }
+        // })
+        const messageResult = [{ data: [] }]
         dispatch(ChatAction.loadedMessages(channelId, messageResult))
       } catch (err) {
         console.log(err)
