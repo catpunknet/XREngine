@@ -65,7 +65,6 @@ store.receptors.push((action: ChatActionType): any => {
         const channelId = action.message.channelId
         const selfUser = action.selfUser
         const channel = s.channels.channels.find((c) => c.id.value === channelId)
-
         if (!channel) {
           s.channels.updateNeeded.set(true)
         } else {
