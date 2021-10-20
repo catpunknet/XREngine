@@ -1,6 +1,6 @@
 import React, { MouseEventHandler } from 'react'
-import Button from '@material-ui/core/Button'
-import ClickAwayListener from '@material-ui/core/ClickAwayListener'
+import Button from '@mui/material/Button'
+import ClickAwayListener from '@mui/material/ClickAwayListener'
 import ScrollableElement from '../ScrollableElement'
 // @ts-ignore
 import defaultStyles from './EmoteMenu.module.scss'

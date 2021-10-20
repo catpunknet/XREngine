@@ -1,5 +1,5 @@
 import React from 'react'
-import CardMedia from '@material-ui/core/CardMedia'
+import CardMedia from '@mui/material/CardMedia'
 import styles from './Featured.module.scss'
 import { getComponentTypeForMedia } from '../Feed'
 

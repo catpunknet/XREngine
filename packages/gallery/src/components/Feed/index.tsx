@@ -4,17 +4,17 @@ import { bindActionCreators, Dispatch } from 'redux'
 import { useTranslation } from 'react-i18next'
 import { AuthService } from '@xrengine/client-core/src/user/state/AuthService'
 import { CreatorService } from '@xrengine/client-core/src/social/state/CreatorService'
-import { Button, Card, Typography, CardContent, CardMedia, CardHeader, Grid } from '@material-ui/core'
+import { Button, Card, Typography, CardContent, CardHeader, Grid } from '@mui/material'
 import { useFeedState } from '@xrengine/client-core/src/social/state/FeedState'
 import { FeedService } from '@xrengine/client-core/src/social/state/FeedService'
 import { Document, Page, pdfjs } from 'react-pdf'
 import Pagination from '@mui/material/Pagination'
-import HighlightOffIcon from '@material-ui/icons/HighlightOff'
-import ShareIcon from '@material-ui/icons/Share'
-import FacebookIcon from '@material-ui/icons/Facebook'
-import TwitterIcon from '@material-ui/icons/Twitter'
-import RedditIcon from '@material-ui/icons/Reddit'
-import LinkIcon from '@material-ui/icons/Link'
+import HighlightOffIcon from '@mui/icons-material/HighlightOff'
+import ShareIcon from '@mui/icons-material/Share'
+import FacebookIcon from '@mui/icons-material/Facebook'
+import TwitterIcon from '@mui/icons-material/Twitter'
+import RedditIcon from '@mui/icons-material/Reddit'
+import LinkIcon from '@mui/icons-material/Link'
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
 
@@ -38,7 +38,7 @@ import {
 } from '@mui/material'
 import { useHistory, useLocation } from 'react-router'
 import { MediaContent } from '../Featured/MediaContent'
-import { Popover } from '@material-ui/core'
+import { Popover } from '@mui/material'
 
 export const getComponentTypeForMedia = (mime) => {
   switch (true) {

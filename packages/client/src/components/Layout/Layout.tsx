@@ -1,5 +1,5 @@
-import { Forum, FullscreenExit, People, ZoomOutMap } from '@material-ui/icons'
-import { ThemeProvider } from '@material-ui/styles'
+import { Forum, FullscreenExit, People, ZoomOutMap } from '@mui/icons-material'
+import { ThemeProvider } from '@mui/styles'
 import { Alerts } from '@xrengine/client-core/src/common/components/Alerts'
 import { UIDialog } from '@xrengine/client-core/src/common/components/Dialog/Dialog'
 import NavMenu from '@xrengine/client-core/src/common/components/NavMenu'

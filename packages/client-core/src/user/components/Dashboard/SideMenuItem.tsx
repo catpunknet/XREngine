@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react'
-import List from '@material-ui/core/List'
-import Divider from '@material-ui/core/Divider'
-import ListItem from '@material-ui/core/ListItem'
+import List from '@mui/material/List'
+import Divider from '@mui/material/Divider'
+import ListItem from '@mui/material/ListItem'
 
-import ListItemIcon from '@material-ui/core/ListItemIcon'
-import ListItemText from '@material-ui/core/ListItemText'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
 import { useTranslation } from 'react-i18next'
 import {
   Accessibility,
@@ -22,16 +22,16 @@ import {
   Toys,
   Casino,
   Shuffle
-} from '@material-ui/icons'
+} from '@mui/icons-material'
 import { Link, withRouter } from 'react-router-dom'
 import { useStylesForDashboard } from './styles'
-import ListSubheader from '@material-ui/core/ListSubheader'
-import RemoveFromQueueIcon from '@material-ui/icons/RemoveFromQueue'
-import ViewModuleIcon from '@material-ui/icons/ViewModule'
-import EmojiPeopleIcon from '@material-ui/icons/EmojiPeople'
-import ExpandLess from '@material-ui/icons/ExpandLess'
-import ExpandMore from '@material-ui/icons/ExpandMore'
-import Collapse from '@material-ui/core/Collapse'
+import ListSubheader from '@mui/material/ListSubheader'
+import RemoveFromQueueIcon from '@mui/icons-material/RemoveFromQueue'
+import ViewModuleIcon from '@mui/icons-material/ViewModule'
+import EmojiPeopleIcon from '@mui/icons-material/EmojiPeople'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import Collapse from '@mui/material/Collapse'
 import { useAuthState } from '../../state/AuthState'
 interface Props {
   authState?: any

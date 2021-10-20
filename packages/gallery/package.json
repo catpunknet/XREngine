@@ -36,7 +36,7 @@
     "@capacitor/filesystem": "1.0.5",
     "@capacitor/ios": "3.2.5",
     "@capacitor/share": "1.0.6",
-    "@material-ui/core": "4.12.3",
+    "@mui/material": "5.0.4",
     "@xrengine/client-core": "^0.4.10",
     "@xrengine/common": "^0.4.10",
     "@xrengine/editor": "^0.4.10",

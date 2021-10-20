@@ -2,17 +2,9 @@ import React, { useEffect, useState } from 'react'
 import styles from './Header.module.scss'
 
 import { useTranslation } from 'react-i18next'
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  Grid,
-  makeStyles,
-  TextField
-} from '@material-ui/core'
-import AddCircleOutlinedIcon from '@material-ui/icons/AddCircleOutlined'
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, Grid, TextField } from '@mui/material'
+import makeStyles from '@mui/styles/makeStyles'
+import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined'
 import { useAuthState } from '@xrengine/client-core/src/user/state/AuthState'
 import { Filesystem } from '@capacitor/filesystem'
 import { useHistory } from 'react-router'
