@@ -29,7 +29,6 @@
   "engines": {
     "node": ">= 16.3.0"
   },
-  "jest": "ts-jest",
   "scripts": {
     "check-errors": "tsc --noemit",
     "dev": "concurrently \"cross-env APP_ENV=development ts-eager src/index.ts\" \"cd ../gameserver && npm run dev\" \"npm run serve-local-files\"",
@@ -70,7 +69,7 @@
     "@feathersjs/socketio-client": "5.0.0-pre.9",
     "@feathersjs/transport-commons": "5.0.0-pre.9",
     "@xrengine/server-core": "^0.4.10",
-    "aws-sdk": "2.1011.0",
+    "aws-sdk": "2.1012.0",
     "bent": "7.3.12",
     "chargebee": "2.7.0",
     "compression": "1.7.4",
