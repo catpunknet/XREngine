@@ -1,5 +1,5 @@
 import { IArrayKeyedMap } from '../types'
-// import HashMap from 'megahash'
+import HashMap from 'megahash'
 
 interface Options<Value> {
   defaultValue?: Value
@@ -8,7 +8,7 @@ interface Options<Value> {
 function stringifyArray(array: any[]) {
   switch (array.length) {
     case 1:
-      return array[0]
+      return '' + array[0]
     case 2:
       return array[0] + ',' + array[1]
     case 3:
@@ -22,8 +22,8 @@ function stringifyArray(array: any[]) {
 
 export default class ArrayKeyedMap<KeySource extends any[], Value> implements IArrayKeyedMap<KeySource, Value> {
   /** ordered by time last used, ascending */
-  map = new Map<string, Value>()
-  keySources = new Map<string, KeySource>()
+  map = new HashMap()
+  _keySources = new Map<string, KeySource>()
   defaultValue: Value
 
   constructor(iterable: Iterable<[KeySource, Value]> = [], options: Options<Value> = {}) {
@@ -36,11 +36,11 @@ export default class ArrayKeyedMap<KeySource extends any[], Value> implements IA
   }
 
   addKey(key: string, keySource: KeySource) {
-    this.keySources.set(key, keySource)
+    this._keySources.set(key, keySource)
   }
 
   getKeySource(key: string): KeySource | undefined {
-    return this.keySources.get(key)
+    return this._keySources.get(key)
   }
 
   set(keySource: KeySource, value: Value) {
@@ -61,22 +61,32 @@ export default class ArrayKeyedMap<KeySource extends any[], Value> implements IA
 
   delete(key: KeySource) {
     const stringKey = stringifyArray(key)
-    this.keySources.delete(stringKey)
+    this._keySources.delete(stringKey)
     return this.map.delete(stringKey)
   }
 
+  *keyStrings(): Generator<string> {
+    let key = this.map.nextKey()
+    while (key !== undefined) {
+      yield key
+      key = this.map.nextKey(key)
+    }
+  }
+
   *keys(): Generator<KeySource> {
-    for (const key of this.map.keys()) {
+    for (const key of this.keyStrings()) {
       yield this.getKeySource(key)!
     }
   }
 
-  values() {
-    return this.map.values()
+  *values(): Generator<KeySource> {
+    for (const key of this.keyStrings()) {
+      yield this.map.get(key)
+    }
   }
 
   clear() {
     this.map.clear()
-    this.keySources.clear()
+    this._keySources.clear()
   }
 }

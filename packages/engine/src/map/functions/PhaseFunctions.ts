@@ -71,18 +71,18 @@ export async function startPhases(state: MapStateUnwrapped, phases: readonly IPh
   let result: any
   for (const phase of phases) {
     const keys = phase.getTaskKeys(state)
-    if (process.env.NODE_ENV === 'development') {
-      if (!keys[Symbol.iterator]) {
-        throw new Error('task keys are not iterable!')
-      }
-    }
+    // if (process.env.APP_ENV === 'development') {
+    //   if (!keys[Symbol.iterator]) {
+    //     throw new Error('task keys are not iterable!')
+    //   }
+    // }
     if (phase.isCachingPhase || phase.isAsyncPhase) {
       const promises = [] as Promise<any>[]
       let promise: Promise<any>
       for (const key of keys) {
-        if (process.env.NODE_ENV === 'development') {
-          checkKey(key)
-        }
+        // if (process.env.APP_ENV === 'development') {
+        //   checkKey(key)
+        // }
         if (phase.getTaskStatus(state, key) === TaskStatus.NOT_STARTED) {
           if (phase.isAsyncPhase) {
             promise = phase.startTask(state, key)

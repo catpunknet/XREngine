@@ -68,9 +68,9 @@ export default defineConfig((command) => {
   };
 
   const returned = {
-    optimizeDeps: {
-      include: getDependenciesToOptimize()
-    },
+    // optimizeDeps: {
+    //   include: getDependenciesToOptimize()
+    // },
     plugins: [
       PkgConfig(),
       OptimizationPersist()
@@ -107,6 +107,7 @@ export default defineConfig((command) => {
   };
   if(process.env.APP_ENV === 'development' || process.env.VITE_LOCAL_BUILD === 'true') {
     returned.server.https = {
+      maxSessionMemory: 100,
       key: fs.readFileSync('../../certs/key.pem'),
       cert: fs.readFileSync('../../certs/cert.pem')
     }

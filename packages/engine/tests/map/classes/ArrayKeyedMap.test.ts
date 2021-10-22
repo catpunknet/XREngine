@@ -35,6 +35,8 @@ describe.only('HashMap', () => {
     sut.set([2], 2)
     sut.set([1], 1)
 
+    console.log(sut._keySources)
+
     assert.deepEqual((it.next().value), [3])
     assert.deepEqual((it.next().value), [2])
     assert.deepEqual((it.next().value), [1])

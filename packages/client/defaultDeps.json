@@ -208,7 +208,6 @@
     "react-apexcharts",
     "react-color/lib/Sketch",
     "react-contextmenu",
-    "react-dnd",
     "react-dnd-html5-backend",
     "react-full-screen",
     "react-json-tree",
