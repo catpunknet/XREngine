@@ -6,7 +6,8 @@ import { Op } from 'sequelize'
 import { Message as MessageInterface } from '@xrengine/common/src/interfaces/Message'
 
 import { Application } from '../../../declarations'
-import { extractLoggedInUserFromParams } from '../../user/auth-management/auth-management.utils'
+import logger from '../../logger'
+import { UserDataType } from '../../user/user/user.class'
 
 export type MessageDataType = MessageInterface
 
@@ -28,12 +29,12 @@ export class Message<T = MessageDataType> extends Service<T> {
   async create(data: any, params?: Params): Promise<T> {
     let channel, channelId
     let userIdList: any[] = []
-    const loggedInUser = extractLoggedInUserFromParams(params)
+    const loggedInUser = params!.user as UserDataType
     const userId = loggedInUser?.id
     const targetObjectId = data.targetObjectId
     const targetObjectType = data.targetObjectType
-    const channelModel = (this.app.service('channel') as any).Model
-    console.log(data)
+    const channelModel = this.app.service('channel').Model
+    logger.info(data)
 
     if (targetObjectType === 'user') {
       const targetUser = await this.app.service('user').get(targetObjectId)

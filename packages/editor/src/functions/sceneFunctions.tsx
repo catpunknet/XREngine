@@ -11,7 +11,7 @@ import { serializeWorld } from '@xrengine/engine/src/scene/functions/serializeWo
  */
 export const getScenes = async (projectName: string): Promise<SceneData[]> => {
   try {
-    const result = await client.service('scenes').get({ projectName, metadataOnly: true })
+    const result = await client.service('scene-data').get({ projectName, metadataOnly: true })
     return result?.data
   } catch (error) {
     console.log('Error in Getting Project:' + error)
@@ -86,7 +86,7 @@ export const saveScene = async (
   const sceneData = serializeWorld()
 
   try {
-    return (await client.service('scene').update(projectName, { sceneName, sceneData, thumbnailBuffer })) as SceneData
+    return await client.service('scene').update(projectName, { sceneName, sceneData, thumbnailBuffer })
   } catch (error) {
     console.error('Error in Getting Project:' + error)
     throw new Error(error)

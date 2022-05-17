@@ -2,7 +2,8 @@ import { BadRequest, Forbidden } from '@feathersjs/errors'
 import { HookContext } from '@feathersjs/feathers'
 import _ from 'lodash'
 
-import { extractLoggedInUserFromParams } from '../user/auth-management/auth-management.utils'
+import logger from '../logger'
+import { UserDataType } from '../user/user/user.class'
 
 // This will attach the owner ID in the contact while creating/updating list item
 export default () => {
@@ -10,7 +11,7 @@ export default () => {
     try {
       let fetchedPartyId
       const { id, data, method, params, app, path } = context
-      const loggedInUser = extractLoggedInUserFromParams(params)
+      const loggedInUser = params.user as UserDataType
       if (path === 'party-user' && method === 'remove') {
         const partyUser = await app.service('party-user').get(id!)
         fetchedPartyId = partyUser.partyId
@@ -38,7 +39,7 @@ export default () => {
         if (isAdmin != null) {
           data.isOwner = 1
         }
-        await app.service('user').patch(loggedInUser.id, {
+        await app.service('user').patch(loggedInUser.id!, {
           partyId: data.partyId
         })
       } else {
@@ -74,7 +75,7 @@ export default () => {
 
       return context
     } catch (err) {
-      console.log('party-permission-authenticate error', err)
+      logger.error('party-permission-authenticate error:', err)
       return null!
     }
   }

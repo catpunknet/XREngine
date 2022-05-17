@@ -11,8 +11,6 @@ import {
 } from 'react-contextmenu'
 import { createGlobalStyle } from 'styled-components'
 
-import { EditorTheme } from '@xrengine/client-core/src/util/theme'
-
 export const MenuItem = _MenuItem
 export const showMenu = _showMenu
 export const SubMenu = _SubMenu
@@ -23,9 +21,9 @@ export const ContextMenuTrigger = _ContextMenuTrigger
  * @author Robert Long
  * @author Abhishek Pathak
  */
-export const ContextMenuStyles = createGlobalStyle<{ theme: EditorTheme }>`
+export const ContextMenuStyles = createGlobalStyle<any>`
   .react-contextmenu {
-    background-color: ${(props) => props.theme.dropdown};
+    background-color: var(--dropdownMenuBackground);
     background-clip: padding-box;
     border-radius: 4px;
     margin: 2px 0 0;
@@ -35,7 +33,7 @@ export const ContextMenuStyles = createGlobalStyle<{ theme: EditorTheme }>`
     padding: 4px 0;
     pointer-events: none;
     text-align: left;
-    box-shadow: ${(props) => props.theme.shadow30};
+    box-shadow: var(--shadow30);
   }
 
   .react-contextmenu-wrapper {
@@ -60,13 +58,13 @@ export const ContextMenuStyles = createGlobalStyle<{ theme: EditorTheme }>`
     display: flex;
     flex: 1;
     justify-content: space-between;
-    color: ${(props) => props.theme.text};
+    color: var(--textColor);
   }
 
   .react-contextmenu-item.react-contextmenu-item--active,
   .react-contextmenu-item.react-contextmenu-item--selected {
-    color: ${(props) => props.theme.text};
-    background-color: ${(props) => props.theme.selected};
+    color: var(--textColor);
+    background-color: var(--dropdownMenuHoverBackground);
     border-color: transparent;
     text-decoration: none;
   }
@@ -75,11 +73,11 @@ export const ContextMenuStyles = createGlobalStyle<{ theme: EditorTheme }>`
   .react-contextmenu-item.react-contextmenu-item--disabled:hover {
     background-color: transparent;
     border-color: rgba(0,0,0,.15);
-    color: ${(props) => props.theme.text};
+    color: var(--textColor);
   }
 
   .react-contextmenu-item--divider {
-    border-bottom: 1px solid ${(props) => props.theme.border};
+    border-bottom: 1px solid var(--border);
     cursor: inherit;
     margin: 4px 0;
     height: 1px;

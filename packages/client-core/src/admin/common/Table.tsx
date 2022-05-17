@@ -11,7 +11,7 @@ import TableRow from '@mui/material/TableRow'
 import TableSortLabel from '@mui/material/TableSortLabel'
 import { visuallyHidden } from '@mui/utils'
 
-import { useStyles } from '../styles/ui'
+import styles from '../styles/table.module.scss'
 
 interface Props {
   rows: any
@@ -19,6 +19,10 @@ interface Props {
   page: number
   rowsPerPage: number
   count: number
+  fieldOrder?: string
+  allowSort?: boolean
+  setSortField?: (fueld: string) => void
+  setFieldOrder?: (order: string) => void
   handlePageChange: (e: unknown, newPage: number) => void
   handleRowsPerPageChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
@@ -70,6 +74,7 @@ function stableSort<T>(array: readonly T[], comparator: (a: T, b: T) => number) 
   })
   return stabilizedThis.map((el) => el[0])
 }
+
 interface EnhancedTableProps {
   onRequestSort: (event: React.MouseEvent<unknown>, property: keyof Data) => void
   order: Order
@@ -80,7 +85,6 @@ interface EnhancedTableProps {
 
 const EnhancedTableHead = (props: EnhancedTableProps) => {
   const { order, orderBy, onRequestSort, columns } = props
-  const classes = useStyles()
   const createSortHandler = (property: keyof Data) => (event: React.MouseEvent<unknown>) => {
     onRequestSort(event, property)
   }
@@ -94,7 +98,7 @@ const EnhancedTableHead = (props: EnhancedTableProps) => {
             align={headCell.align}
             padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
-            className={classes.tableCellHeader}
+            className={styles.tableCellHeader}
             style={{ minWidth: headCell.minWidth }}
           >
             {(headCell.id as any) === 'action' ? (
@@ -104,7 +108,7 @@ const EnhancedTableHead = (props: EnhancedTableProps) => {
                 active={orderBy === headCell.id}
                 direction={orderBy === headCell.id ? order : 'asc'}
                 onClick={createSortHandler(headCell.id)}
-                classes={{ icon: classes.spanWhite, active: classes.spanWhite }}
+                classes={{ icon: styles.spanWhite, active: styles.spanWhite }}
               >
                 {headCell.label}
                 {orderBy === headCell.id ? (
@@ -122,19 +126,32 @@ const EnhancedTableHead = (props: EnhancedTableProps) => {
 }
 
 const TableComponent = (props: Props) => {
-  const classes = useStyles()
-  const { rows, column, page, rowsPerPage, count, handlePageChange, handleRowsPerPageChange } = props
-  const [order, setOrder] = React.useState<Order>('asc')
+  const {
+    rows,
+    column,
+    page,
+    rowsPerPage,
+    count,
+    fieldOrder,
+    allowSort,
+    setSortField,
+    setFieldOrder,
+    handlePageChange,
+    handleRowsPerPageChange
+  } = props
+  const [order, setOrder] = React.useState<Order>(fieldOrder === 'desc' ? 'desc' : 'asc')
   const [orderBy, setOrderBy] = React.useState<keyof Data>(column[0].id)
   const handleRequestSort = (event: React.MouseEvent<unknown>, property: keyof Data) => {
     const isAsc = orderBy === property && order === 'asc'
     setOrder(isAsc ? 'desc' : 'asc')
+    setSortField && setSortField(property)
+    setFieldOrder && setFieldOrder(order)
     setOrderBy(property)
   }
 
   return (
     <React.Fragment>
-      <TableContainer className={classes.tableContainer}>
+      <TableContainer className={styles.tableContainer}>
         <Table stickyHeader aria-label="sticky table">
           <EnhancedTableHead
             order={order}
@@ -144,36 +161,20 @@ const TableComponent = (props: Props) => {
             columns={column}
           />
           <TableBody>
-            {stableSort(rows, getComparator(order, orderBy))
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row, index) => {
-                return (
-                  <TableRow hover role="checkbox" tabIndex={-1} key={row.name}>
-                    {column.map((column, index) => {
-                      const value = row[column.id]
-                      return (
-                        <TableCell key={index} align={column.align} className={classes.tableCellBody}>
-                          {value}
-                        </TableCell>
-                      )
-                    })}
-                  </TableRow>
-                )
-              })}
-            {/* {rows.map((row, rIndex) => {
+            {(allowSort ? stableSort(rows, getComparator(order, orderBy)) : rows).map((row, index) => {
               return (
-                <TableRow hover role="checkbox" tabIndex={-1} key={rIndex}>
+                <TableRow hover role="checkbox" tabIndex={-1} key={`${index}${row.name}`}>
                   {column.map((column, index) => {
                     const value = row[column.id]
                     return (
-                      <TableCell key={index} align={column.align} className={classes.tableCellBody}>
+                      <TableCell key={index} align={column.align} className={styles.tableCellBody}>
                         {value}
                       </TableCell>
                     )
                   })}
                 </TableRow>
               )
-            })} */}
+            })}
           </TableBody>
         </Table>
       </TableContainer>
@@ -185,7 +186,7 @@ const TableComponent = (props: Props) => {
         page={page}
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
-        className={classes.tableFooter}
+        className={styles.tableFooter}
       />
     </React.Fragment>
   )

@@ -1,15 +1,29 @@
-import { Params, ServiceMethods } from '@feathersjs/feathers/lib/declarations'
+import { NullableId, Params, ServiceMethods } from '@feathersjs/feathers/lib/declarations'
+import appRootPath from 'app-root-path'
+import fs from 'fs'
+import path from 'path/posix'
 
 import { FileContentType } from '@xrengine/common/src/interfaces/FileContentType'
 
 import { Application } from '../../../declarations'
+import { copyRecursiveSync, getIncrementalName } from '../FileUtil'
 import { getCachedAsset } from '../storageprovider/getCachedAsset'
-import { useStorageProvider } from '../storageprovider/storageprovider'
-import { StorageProviderInterface } from '../storageprovider/storageprovider.interface'
+import { getStorageProvider } from '../storageprovider/storageprovider'
+import { StorageObjectInterface, StorageProviderInterface } from '../storageprovider/storageprovider.interface'
 
-const storageProvider = useStorageProvider()
+export const projectsRootFolder = path.join(appRootPath.path, 'packages/projects')
+
+type UpdateParamsType = {
+  oldName: string
+  newName: string
+  oldPath: string
+  newPath: string
+  isCopy?: boolean
+}
 
 interface PatchParams {
+  path: string
+  fileName: string
   body: Buffer
   contentType: string
 }
@@ -21,13 +35,14 @@ interface PatchParams {
  */
 
 export class FileBrowserService implements ServiceMethods<any> {
-  store: StorageProviderInterface
+  app: Application
 
-  async setup(app: Application, path: string) {
-    this.store = useStorageProvider()
+  constructor(app: Application) {
+    this.app = app
   }
 
-  async find(params?: Params) {}
+  async setup(app: Application, path: string) {}
+  async find(_params?: Params) {}
 
   /**
    * Return the metadata for each file in a directory
@@ -35,9 +50,10 @@ export class FileBrowserService implements ServiceMethods<any> {
    * @param params
    * @returns
    */
-  async get(directory: string, params?: Params): Promise<FileContentType[]> {
-    if (directory.substr(0, 1) === '/') directory = directory.slice(1) // remove leading slash
-    const result = await this.store.listFolderContent(directory)
+  async get(directory: string, _params?: Params): Promise<FileContentType[]> {
+    const storageProvider = getStorageProvider()
+    if (directory[0] === '/') directory = directory.slice(1) // remove leading slash
+    const result = await storageProvider.listFolderContent(directory)
     return result
   }
 
@@ -47,9 +63,20 @@ export class FileBrowserService implements ServiceMethods<any> {
    * @param params
    * @returns
    */
-  async create(directory, params?: Params) {
-    if (directory.substr(0, 1) === '/') directory = directory.slice(1) // remove leading slash
-    return this.store.putObject({ Key: directory + '/', Body: Buffer.alloc(0), ContentType: 'application/x-empty' })
+  async create(directory) {
+    const storageProvider = getStorageProvider()
+    if (directory[0] === '/') directory = directory.slice(1) // remove leading slash
+
+    const parentPath = path.dirname(directory)
+    const key = await getIncrementalName(path.basename(directory), parentPath, storageProvider, true)
+
+    const result = await storageProvider.putObject({ Key: path.join(parentPath, key) } as StorageObjectInterface, {
+      isDirectory: true
+    })
+
+    fs.mkdirSync(path.join(projectsRootFolder, parentPath, key))
+
+    return result
   }
 
   /**
@@ -59,10 +86,25 @@ export class FileBrowserService implements ServiceMethods<any> {
    * @param params
    * @returns
    */
-  async update(from: string, { destination, isCopy, renameTo }, params?: Params) {
-    // TODO
-    // throw new Error('[File Browser]: Temporarily disabled for instability. - TODO')
-    return this.store.moveObject(from, destination, isCopy, renameTo)
+  async update(_id: NullableId, data: UpdateParamsType, _params?: Params) {
+    const storageProvider = getStorageProvider()
+    const _oldPath = data.oldPath[0] === '/' ? data.oldPath.substring(1) : data.oldPath
+    const _newPath = data.newPath[0] === '/' ? data.newPath.substring(1) : data.newPath
+
+    const isDirectory = await storageProvider.isDirectory(data.oldName, _oldPath)
+    const fileName = await getIncrementalName(data.newName, _newPath, storageProvider, isDirectory)
+    const result = await storageProvider.moveObject(data.oldName, fileName, _oldPath, _newPath, data.isCopy)
+
+    const oldNamePath = path.join(projectsRootFolder, _oldPath, data.oldName)
+    const newNamePath = path.join(projectsRootFolder, _newPath, fileName)
+
+    if (data.isCopy) {
+      copyRecursiveSync(oldNamePath, newNamePath)
+    } else {
+      fs.renameSync(oldNamePath, newNamePath)
+    }
+
+    return result
   }
 
   /**
@@ -71,13 +113,24 @@ export class FileBrowserService implements ServiceMethods<any> {
    * @param data
    * @param params
    */
-  async patch(path: string, data: PatchParams, params?: Params) {
-    await this.store.putObject({
-      Key: path,
-      Body: data.body,
-      ContentType: data.contentType
-    })
-    return getCachedAsset(path, storageProvider.cacheDomain)
+  async patch(_id: NullableId, data: PatchParams, params?: Params) {
+    const storageProvider = getStorageProvider()
+    const key = path.join(data.path[0] === '/' ? data.path.substring(1) : data.path, data.fileName)
+
+    await storageProvider.putObject(
+      {
+        Key: key,
+        Body: data.body,
+        ContentType: data.contentType
+      },
+      {
+        isDirectory: false
+      }
+    )
+
+    fs.writeFileSync(path.join(projectsRootFolder, key), data.body)
+
+    return getCachedAsset(key, storageProvider.cacheDomain, params && params.provider == null)
   }
 
   /**
@@ -86,8 +139,26 @@ export class FileBrowserService implements ServiceMethods<any> {
    * @param params
    * @returns
    */
-  async remove(path: string, params?: Params) {
-    const dirs = await this.store.listObjects(path + '/', [], true, null!)
-    return await this.store.deleteResources([path, ...dirs.Contents.map((a) => a.Key)])
+  async remove(key: string, _params?: Params) {
+    const storageProvider = getStorageProvider()
+    const dirs = await storageProvider.listObjects(key, true)
+    const result = await storageProvider.deleteResources([key, ...dirs.Contents.map((a) => a.Key)])
+
+    const filePath = path.join(projectsRootFolder, key)
+    if (fs.lstatSync(filePath).isDirectory()) {
+      fs.rmSync(filePath, { force: true, recursive: true })
+    } else {
+      fs.unlinkSync(filePath)
+    }
+
+    const staticResource = await this.app.service('static-resource').find({
+      where: {
+        key: key,
+        $limit: 1
+      }
+    })
+    staticResource?.data?.length > 0 && (await this.app.service('static-resource').remove(staticResource?.data[0]?.id))
+
+    return result
   }
 }

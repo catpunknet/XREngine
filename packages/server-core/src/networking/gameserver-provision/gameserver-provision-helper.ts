@@ -1,17 +1,21 @@
+import { Paginated } from '@feathersjs/feathers'
+
 import { Application } from '../../../declarations'
+import logger from '../../logger'
+import { LocationDataType } from '../../social/location/location.class'
 import { getFreeGameserver } from '../instance-provision/instance-provision.class'
 
 export const patchGameserverLocation = async (app: Application, locationId) => {
   try {
-    const location = await app.service('location').find({
+    const location = (await app.service('location').find({
       query: {
         id: locationId
       }
-    })
+    })) as Paginated<LocationDataType>
 
     if (!location.data.length) {
       const message = `Failed to patch gameserver. (Location for id '${locationId}' is not found.)`
-      console.log(message)
+      logger.info(message)
       return { status: false, message }
     }
 
@@ -27,7 +31,7 @@ export const patchGameserverLocation = async (app: Application, locationId) => {
 
     return { status: true, message: 'Gameserver patched successfully' }
   } catch (e) {
-    console.log(e)
+    logger.error(e)
     return { status: false, message: `Failed to patch gameserver. (${e.body.reason})` }
   }
 }

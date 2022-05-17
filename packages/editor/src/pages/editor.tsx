@@ -1,7 +1,6 @@
 import React, { Suspense, useEffect, useState } from 'react'
 import { Route, Switch, useHistory } from 'react-router-dom'
 
-import { AuthService } from '@xrengine/client-core/src/user/services/AuthService'
 import { useAuthState } from '@xrengine/client-core/src/user/services/AuthService'
 import { userHasAccess } from '@xrengine/client-core/src/user/userHasAccess'
 
@@ -16,14 +15,10 @@ const EditorProtectedRoutes = () => {
   const [isAuthorized, setAuthorized] = useState<boolean | null>(null)
 
   useEffect(() => {
-    AuthService.doLoginAuto(false)
-  }, [])
-
-  useEffect(() => {
     if (user.scopes.value && user.userRole.value) {
       const hasAccess = userHasAccess('editor:write')
       if (!hasAccess) {
-        history.push('/login')
+        history.push('/')
         setAuthorized(false)
       } else setAuthorized(true)
     }

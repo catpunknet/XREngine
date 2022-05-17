@@ -1,8 +1,7 @@
-@use '../theme.scss' as theme;
-
 .assetsPanel {
   height: 100%;
 }
+
 .panelContainer {
   height: 100%;
   position: relative;
@@ -17,31 +16,32 @@
   flex-direction: row;
   align-items: center;
   padding-left: 5px;
-  color: white;
+  color: var(--textColor);
   cursor: pointer;
 
   &:hover {
-    background: theme.$hover;
+    background: var(--dropdownMenuHoverBackground);
   }
 
   .fileNameContainer {
     margin-right: 3px;
   }
 }
+
 .paperDialog {
-  background: rgb(58, 65, 73) !important;
-  color: #f1f1f1;
+  background: var(--popupBackground) !important;
+  color: var(--textColor);
   width: 100%;
-  padding: 40px 10px 40px 10px;
+  padding: 40px 10px;
 }
 
 .primaryText {
-  color: #f1f1f1;
+  color: var(--textColor);
   font-size: 1.3rem;
 }
 
 .secondaryText {
-  color: #b3b3b3;
+  color: var(--textColor);
 }
 
 .inputContainer {
@@ -51,12 +51,12 @@
   margin-left: 5px;
   background: #343b41;
   border: 1px solid #23282c;
-  color: #f1f1f1 !important;
+  color: var(--textColor) !important;
 }
 
 .input {
   flex: 1;
-  color: #f1f1f1;
+  color: var(--textColor);
 }
 
 .contentContainer {
@@ -65,11 +65,11 @@
   overflow: auto;
 }
 
-.btnConatiner {
+.btnContainer {
   display: flex;
   width: 100%;
   justify-content: end;
-  padding: 10px 10px 0 10px;
+  padding: 10px 10px 0;
 
   .newBtn {
     margin: 0;
@@ -77,6 +77,8 @@
     width: 100px;
     font-size: 14px;
     flex-shrink: 0;
+    color: var(--textColor);
+    background-color: var(--buttonFilled);
   }
 }
 
@@ -91,7 +93,7 @@
   .sceneContainer {
     border-radius: 4px;
     overflow: hidden;
-    background: theme.$background2;
+    background: var(--inputBackground);
     min-height: 125px;
     cursor: pointer;
 
@@ -115,8 +117,8 @@
       }
 
       .inputContainer {
-        background: theme.$panel;
-        color: theme.$text;
+        background: var(--inputBackground);
+        color: var(--textColor);
 
         .input {
           font-size: 12px;
@@ -126,28 +128,34 @@
     }
 
     button {
-      color: theme.$text;
+      color: var(--textColor);
     }
 
     &:hover,
     &:focus-visible {
-      outline: solid 2px theme.$blue;
+      outline: solid 2px var(--panelCardHoverOutline);
+
       .detailBlock {
-        color: theme.$text;
+        color: var(--textColor);
       }
     }
   }
 }
 
 .sceneContextMenu {
-  background: theme.$panel;
-  color: theme.$text;
+  background: var(--inputBackground);
+  color: var(--textColor);
 
   .menuItem {
     font-size: 14px;
+
     &:hover,
     &:focus-visible {
-      background: theme.$blue;
+      background: var(--dropdownMenuHoverBackground);
+    }
+
+    &:global(.Mui-selected) {
+      background: var(--dropdownMenuSelectedBackground);
     }
   }
 }
@@ -166,5 +174,9 @@
 }
 
 .separator {
-  color: #5d646c;
+  color: var(--textColor);
+}
+
+.breadcrumb {
+  color: var(--textColor);
 }

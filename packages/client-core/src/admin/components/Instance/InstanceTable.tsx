@@ -1,15 +1,15 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Instance } from '@xrengine/common/src/interfaces/Instance'
 import { Location } from '@xrengine/common/src/interfaces/Location'
 
 import { useAuthState } from '../../../user/services/AuthService'
-import ConfirmModel from '../../common/ConfirmModel'
+import ConfirmModal from '../../common/ConfirmModal'
 import TableComponent from '../../common/Table'
 import { instanceColumns, InstanceData } from '../../common/variables/instance'
 import { InstanceService, INSTNCE_PAGE_LIMIT, useInstanceState } from '../../services/InstanceService'
-import { useStyles } from '../../styles/ui'
+import styles from '../../styles/admin.module.scss'
 
 interface Props {
   fetchAdminState?: any
@@ -25,13 +25,14 @@ interface Props {
  */
 const InstanceTable = (props: Props) => {
   const { search } = props
-  const classes = useStyles()
-  const [page, setPage] = React.useState(0)
-  const [rowsPerPage, setRowsPerPage] = React.useState(INSTNCE_PAGE_LIMIT)
-  const [refetch, setRefetch] = React.useState(false)
-  const [popConfirmOpen, setPopConfirmOpen] = React.useState(false)
-  const [instanceId, setInstanceId] = React.useState('')
-  const [instanceName, setInstanceName] = React.useState('')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(INSTNCE_PAGE_LIMIT)
+  const [refetch, setRefetch] = useState(false)
+  const [popConfirmOpen, setPopConfirmOpen] = useState(false)
+  const [instanceId, setInstanceId] = useState('')
+  const [instanceName, setInstanceName] = useState('')
+  const [fieldOrder, setFieldOrder] = useState('asc')
+  const [sortField, setSortField] = useState('createdAt')
   const { t } = useTranslation()
 
   const user = useAuthState().user
@@ -39,12 +40,17 @@ const InstanceTable = (props: Props) => {
   const adminInstances = adminInstanceState
 
   const handlePageChange = (event: unknown, newPage: number) => {
-    const incDec = page < newPage ? 'increment' : 'decrement'
-    InstanceService.fetchAdminInstances(incDec)
+    InstanceService.fetchAdminInstances(search, newPage, sortField, fieldOrder)
     setPage(newPage)
   }
 
-  const handleCloseModel = () => {
+  useEffect(() => {
+    if (adminInstanceState.fetched.value) {
+      InstanceService.fetchAdminInstances(search, page, sortField, fieldOrder)
+    }
+  }, [fieldOrder])
+
+  const handleCloseModal = () => {
     setPopConfirmOpen(false)
   }
 
@@ -77,8 +83,8 @@ const InstanceTable = (props: Props) => {
 
   React.useEffect(() => {
     if (!isMounted.current) return
-    if ((user.id.value && adminInstances.updateNeeded.value) || refetch === true) {
-      InstanceService.fetchAdminInstances('increment', search)
+    if ((user.id.value && adminInstances.updateNeeded.value) || refetch) {
+      InstanceService.fetchAdminInstances(search, page, sortField, fieldOrder)
     }
     setRefetch(false)
   }, [user, adminInstanceState.updateNeeded.value, refetch])
@@ -101,14 +107,14 @@ const InstanceTable = (props: Props) => {
       action: (
         <a
           href="#h"
-          className={classes.actionStyle}
+          className={styles.actionStyle}
           onClick={() => {
             setPopConfirmOpen(true)
             setInstanceId(id)
             setInstanceName(ipAddress)
           }}
         >
-          <span className={classes.spanDange}>{t('admin:components.locationModel.lbl-delete')}</span>
+          <span className={styles.spanDange}>{t('admin:components.locationModal.lbl-delete')}</span>
         </a>
       )
     }
@@ -121,6 +127,10 @@ const InstanceTable = (props: Props) => {
   return (
     <React.Fragment>
       <TableComponent
+        allowSort={false}
+        fieldOrder={fieldOrder}
+        setSortField={setSortField}
+        setFieldOrder={setFieldOrder}
         rows={rows}
         column={instanceColumns}
         page={page}
@@ -129,9 +139,9 @@ const InstanceTable = (props: Props) => {
         handlePageChange={handlePageChange}
         handleRowsPerPageChange={handleRowsPerPageChange}
       />
-      <ConfirmModel
+      <ConfirmModal
         popConfirmOpen={popConfirmOpen}
-        handleCloseModel={handleCloseModel}
+        handleCloseModal={handleCloseModal}
         submit={submitRemoveInstance}
         name={instanceName}
         label={'instance'}

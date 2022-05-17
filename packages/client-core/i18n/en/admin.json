@@ -1,6 +1,6 @@
 {
   "components": {
-    "locationModel": {
+    "locationModal": {
       "lbl-name": "Name",
       "lbl-maxuser": "Max Users",
       "lbl-scene": "Scene",
@@ -233,8 +233,16 @@
       "key": "Key",
       "callback": "Callback",
       "appId": "App ID",
+      "appTitle": "App Title",
+      "appSubtitle": "App Subtitle",
+      "appDescription": "App Description",
+      "appBackground": "App Background",
+      "appSocialLinks": "Social Links",
+      "icon": "Icon",
+      "link": "Link",
       "cancel": "Cancel",
       "save": "Save",
+      "resetTheme": "Reset to Default",
       "aws": "AWS",
       "keys": "Keys",
       "accessKeyId": "Access Key ID",
@@ -314,8 +322,8 @@
     },
     "dialog": {
       "notAccess": "No access",
-      "askAccessResourceMessage": "To access this resource, please enter your username here to ask for access.",
-      "cancel": "Cancel",
+      "askAccessResourceMessage": "To access this resource, please enter your username here to ask for access or login to continue.",
+      "login": "Login",
       "submit": "Submit"
     },
     "user": {

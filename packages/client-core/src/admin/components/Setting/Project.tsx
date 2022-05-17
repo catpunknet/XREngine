@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useHookedEffect } from '@xrengine/common/src/utils/useHookedEffect'
+import { useHookEffect } from '@xrengine/hyperflux'
 import { loadConfigForProject } from '@xrengine/projects/loadConfigForProject'
 
 import { Button, Grid, InputBase, MenuItem, Paper, TextField, Typography } from '@mui/material'
@@ -9,7 +9,7 @@ import { Button, Grid, InputBase, MenuItem, Paper, TextField, Typography } from 
 import { ProjectService, useProjectState } from '../../../common/services/ProjectService'
 import { useAuthState } from '../../../user/services/AuthService'
 import { ProjectSettingService, useProjectSettingState } from '../../services/Setting/ProjectSettingService'
-import { useStyles } from './styles'
+import styles from '../../styles/settings.module.scss'
 
 interface Props {}
 
@@ -19,7 +19,6 @@ interface ProjectSetting {
 }
 
 const Project = (props: Props) => {
-  const classes = useStyles()
   const authState = useAuthState()
   const user = authState.user
   const { t } = useTranslation()
@@ -42,7 +41,7 @@ const Project = (props: Props) => {
     }
   }, [selectedProject])
 
-  useHookedEffect(() => {
+  useHookEffect(() => {
     if (projectSetting.value && projectSetting.value?.length > 0) {
       let tempSettings = JSON.parse(JSON.stringify(settings))
 
@@ -102,14 +101,19 @@ const Project = (props: Props) => {
   return (
     <div>
       <form>
-        <Typography component="h1" className={classes.settingsHeading}>
+        <Typography component="h1" className={styles.settingsHeading}>
           {t('admin:components.setting.project')}
         </Typography>
-        <div className={classes.root}>
+        <div className={styles.root}>
           <Grid container spacing={3}>
             <Grid item xs={6} sm={4}>
               <label>{t('admin:components.setting.selectProject')}</label>
-              <TextField select value={selectedProject} className={classes.selectInput}>
+              <TextField
+                select
+                value={selectedProject}
+                className={styles.selectInput}
+                SelectProps={{ MenuProps: { classes: { paper: styles.selectPaper } } }}
+              >
                 {projects.value &&
                   projects.value.map((proj, index) => (
                     <MenuItem key={index} value={proj.id} onClick={() => handleProjectChange(proj.id)}>
@@ -124,24 +128,17 @@ const Project = (props: Props) => {
                   <Grid item container key={index} spacing={1} xs={12}>
                     <Grid item xs={6}>
                       <label>Key Name</label>
-                      <Paper component="div" className={classes.createInput}>
-                        <InputBase
-                          name="key"
-                          disabled
-                          className={classes.input}
-                          value={setting.key}
-                          style={{ color: '#fff' }}
-                        />
+                      <Paper component="div" className={styles.createInput}>
+                        <InputBase name="key" disabled className={styles.input} value={setting.key} />
                       </Paper>
                     </Grid>
                     <Grid item xs={6}>
                       <label>Value</label>
-                      <Paper component="div" className={classes.createInput}>
+                      <Paper component="div" className={styles.createInput}>
                         <InputBase
                           name="value"
-                          className={classes.input}
+                          className={styles.input}
                           value={setting.value}
-                          style={{ color: '#fff' }}
                           onChange={(e) => handleValueChange(index, e)}
                         />
                       </Paper>
@@ -157,11 +154,11 @@ const Project = (props: Props) => {
           </Grid>
           {settings?.length > 0 && (
             <Grid item container xs={12}>
-              <Button sx={{ maxWidth: '100%' }} variant="outlined" style={{ color: '#fff' }} onClick={handleCancel}>
+              <Button sx={{ maxWidth: '100%' }} variant="outlined" onClick={handleCancel}>
                 {t('admin:components.setting.cancel')}
               </Button>
               &nbsp; &nbsp;
-              <Button sx={{ maxWidth: '100%' }} variant="contained" onClick={handleSubmit}>
+              <Button sx={{ maxWidth: '100%' }} variant="contained" className={styles.saveBtn} onClick={handleSubmit}>
                 {t('admin:components.setting.save')}
               </Button>
             </Grid>

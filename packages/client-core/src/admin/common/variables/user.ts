@@ -1,5 +1,5 @@
 export interface UserColumn {
-  id: 'name' | 'avatar' | 'status' | 'location' | 'inviteCode' | 'instanceId' | 'action'
+  id: 'name' | 'avatarId' | 'userRole' | 'location' | 'inviteCode' | 'instanceId' | 'action'
   label: string
   minWidth?: number
   align?: 'right'
@@ -7,9 +7,9 @@ export interface UserColumn {
 
 export const userColumns: UserColumn[] = [
   { id: 'name', label: 'Name', minWidth: 65 },
-  { id: 'avatar', label: 'Avatar', minWidth: 65 },
+  { id: 'avatarId', label: 'Avatar', minWidth: 65 },
   {
-    id: 'status',
+    id: 'userRole',
     label: 'Status',
     minWidth: 65,
     align: 'right'
@@ -44,8 +44,8 @@ export interface UserData {
   id: string
   el: any
   name: string
-  avatar: string | JSX.Element
-  status: string | JSX.Element
+  avatarId: string | JSX.Element
+  userRole: string | JSX.Element
   location: string | JSX.Element
   inviteCode: string | JSX.Element
   instanceId: string | JSX.Element
@@ -64,32 +64,4 @@ export interface UserTabPanelProps {
   children?: React.ReactNode
   index: any
   value: any
-}
-
-export const userFilterMenu = {
-  elevation: 0,
-  sx: {
-    overflow: 'visible',
-    filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-    mt: 1.5,
-    '& .MuiAvatar-root': {
-      width: 32,
-      height: 32,
-      ml: -0.5,
-      mr: 1
-    },
-    bgcolor: 'rgb(58, 65, 73) !important',
-    '&:before': {
-      content: '""',
-      display: 'block',
-      position: 'absolute',
-      top: 0,
-      right: 14,
-      width: 10,
-      height: 10,
-      bgcolor: 'rgb(58, 65, 73) !important',
-      transform: 'translateY(-50%) rotate(45deg)',
-      zIndex: 0
-    }
-  }
 }

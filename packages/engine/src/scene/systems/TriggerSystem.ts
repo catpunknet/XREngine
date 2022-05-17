@@ -1,10 +1,11 @@
+import { dispatchAction } from '@xrengine/hyperflux'
+
 import { isClient } from '../../common/functions/isClient'
 import { Engine } from '../../ecs/classes/Engine'
-import { EngineActions } from '../../ecs/classes/EngineService'
+import { EngineActions } from '../../ecs/classes/EngineState'
 import { World } from '../../ecs/classes/World'
 import { defineQuery, getComponent } from '../../ecs/functions/ComponentFunctions'
-import { dispatchLocal } from '../../networking/functions/dispatchFrom'
-import { Object3DComponent, Object3DWithEntity } from '../components/Object3DComponent'
+import { Object3DComponent } from '../components/Object3DComponent'
 import { PortalComponent } from '../components/PortalComponent'
 import { TriggerDetectedComponent } from '../components/TriggerDetectedComponent'
 import { TriggerVolumeComponent } from '../components/TriggerVolumeComponent'
@@ -24,11 +25,11 @@ export default async function TriggerSystem(world: World) {
       if (getComponent(triggerEntity, PortalComponent)) {
         const portalComponent = getComponent(triggerEntity, PortalComponent)
         if (isClient && portalComponent.redirect) {
-          window.location.href = Engine.publicPath + '/location/' + portalComponent.location
+          window.location.href = Engine.instance.publicPath + '/location/' + portalComponent.location
           continue
         }
         world.activePortal = portalComponent
-        dispatchLocal(EngineActions.setTeleporting(true))
+        dispatchAction(Engine.instance.store, EngineActions.setTeleporting({ isTeleporting: true }))
         continue
       }
 
@@ -38,12 +39,12 @@ export default async function TriggerSystem(world: World) {
 
       const filtered = sceneEntityCaches.filter((cache: any) => cache.target == triggerComponent.target)
       let targetObj: any
-      console.log(filtered)
+
       if (filtered.length > 0) {
         const filtedData: any = filtered[0]
         targetObj = filtedData.object
       } else {
-        targetObj = world.entityTree.findNodeFromUUID(triggerComponent.target)
+        targetObj = world.entityTree.uuidNodeMap.get(triggerComponent.target)
         if (targetObj) {
           sceneEntityCaches.push({
             target: triggerComponent.target,
@@ -79,7 +80,7 @@ export default async function TriggerSystem(world: World) {
         const filtedData: any = filtered[0]
         targetObj = filtedData.object
       } else {
-        targetObj = world.entityTree.findNodeFromUUID(triggerComponent.target)
+        targetObj = world.entityTree.uuidNodeMap.get(triggerComponent.target)
         if (targetObj) {
           sceneEntityCaches.push({
             target: triggerComponent.target,

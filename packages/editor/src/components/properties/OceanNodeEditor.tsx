@@ -1,7 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineService'
+import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
 import { getComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { ErrorComponent } from '@xrengine/engine/src/scene/components/ErrorComponent'
 import { OceanComponent } from '@xrengine/engine/src/scene/components/OceanComponent'
@@ -88,7 +88,11 @@ export const OceanNodeEditor: EditorComponentType = (props) => {
         onChange={updateProperty(OceanComponent, 'opacityFadeDistance')}
       />
       <InputGroup name="Opacity Range" label={t('editor:properties.ocean.lbl-opacityRange')}>
-        <Vector2Input value={oceanComponent.opacityRange} onChange={updateProperty(OceanComponent, 'opacityRange')} />
+        <Vector2Input
+          value={oceanComponent.opacityRange}
+          onChange={updateProperty(OceanComponent, 'opacityRange')}
+          hideLabels
+        />
       </InputGroup>
       <NumericInputGroup
         name="Shininess"

@@ -7,9 +7,12 @@ import path from 'path/posix'
 import { FileContentType } from '@xrengine/common/src/interfaces/FileContentType'
 
 import config from '../../appconfig'
+import logger from '../../logger'
 import { getContentType } from '../../util/fileUtils'
+import { copyRecursiveSync } from '../FileUtil'
 import {
   BlobStore,
+  PutObjectParams,
   StorageListObjectInterface,
   StorageObjectInterface,
   StorageProviderInterface
@@ -44,13 +47,13 @@ export class LocalStorage implements StorageProviderInterface {
 
   listObjects = async (
     prefix: string,
-    results: any[],
     recursive = false,
     continuationToken: string
   ): Promise<StorageListObjectInterface> => {
     const filePath = path.join(this.PATH_PREFIX, prefix)
     if (!fs.existsSync(filePath)) return { Contents: [] }
-    const globResult = glob.sync(path.join(filePath, '**/*.*'))
+    // glob all files and directories
+    const globResult = glob.sync(path.join(filePath, '**'))
     return {
       Contents: globResult.map((result) => {
         return { Key: result.replace(path.join(this.PATH_PREFIX), '') }
@@ -58,20 +61,24 @@ export class LocalStorage implements StorageProviderInterface {
     }
   }
 
-  putObject = async (params: StorageObjectInterface): Promise<any> => {
-    const filePath = path.join(this.PATH_PREFIX, params.Key!)
-    const pathWithoutFile = path.dirname(filePath)
-    if (filePath.substr(-1) === '/') {
+  putObject = async (data: StorageObjectInterface, params: PutObjectParams = {}): Promise<any> => {
+    const filePath = path.join(this.PATH_PREFIX, data.Key!)
+
+    if (params.isDirectory) {
       if (!fs.existsSync(filePath)) {
-        await fs.promises.mkdir(filePath, { recursive: true })
+        fs.mkdirSync(filePath, { recursive: true })
         return true
       }
       return false
     }
+
+    const pathWithoutFile = path.dirname(filePath)
     if (pathWithoutFile == null) throw new Error('Invalid file path in local putObject')
-    const pathWithoutFileExists = fs.existsSync(pathWithoutFile)
-    if (!pathWithoutFileExists) await fs.promises.mkdir(pathWithoutFile, { recursive: true })
-    return fs.promises.writeFile(filePath, params.Body)
+    if (!fs.existsSync(pathWithoutFile)) fs.mkdirSync(pathWithoutFile, { recursive: true })
+
+    fs.writeFileSync(filePath, data.Body)
+
+    return true
   }
 
   createInvalidation = async (): Promise<any> => Promise.resolve()
@@ -79,13 +86,18 @@ export class LocalStorage implements StorageProviderInterface {
   getProvider = (): StorageProviderInterface => this
   getStorage = (): BlobStore => this._store
 
-  checkObjectExistence = (key: string): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      const filePath = path.join(this.PATH_PREFIX, key)
-      const exists = fs.existsSync(filePath)
-      if (exists) reject(new Error('Object already exists'))
-      else resolve(null)
-    })
+  doesExist(fileName: string, directoryPath: string): Promise<boolean> {
+    return fs.promises
+      .access(path.join(this.PATH_PREFIX, directoryPath, fileName))
+      .then(() => true)
+      .catch(() => false)
+  }
+
+  isDirectory(fileName: string, directoryPath: string): Promise<boolean> {
+    return fs.promises
+      .lstat(path.join(this.PATH_PREFIX, directoryPath, fileName))
+      .then((res) => res.isDirectory())
+      .catch(() => false)
   }
 
   getSignedUrl = (key: string, _expiresAfter: number, _conditions): any => {
@@ -97,24 +109,6 @@ export class LocalStorage implements StorageProviderInterface {
     }
   }
 
-  removeDir(path: string) {
-    if (fs.existsSync(path)) {
-      const files = fs.readdirSync(path)
-      if (files.length > 0) {
-        files.forEach((filename) => {
-          if (fs.statSync(path + filename).isDirectory()) {
-            this.removeDir(path + filename)
-          } else {
-            fs.unlinkSync(path + filename)
-          }
-        })
-        fs.rmdirSync(path)
-      } else {
-        fs.rmdirSync(path)
-      }
-    }
-  }
-
   deleteResources(keys: string[]) {
     const blobs = this.getStorage()
 
@@ -123,7 +117,7 @@ export class LocalStorage implements StorageProviderInterface {
         return new Promise<boolean>((resolve) => {
           blobs.exists(key, (err, exists) => {
             if (err) {
-              console.error(err)
+              logger.error(err)
               resolve(false)
               return
             }
@@ -131,16 +125,18 @@ export class LocalStorage implements StorageProviderInterface {
               blobs.remove(key, (err) => {
                 if (err) {
                   const filePath = path.join(this.PATH_PREFIX, key)
-                  if (fs.statSync(filePath).isDirectory()) {
-                    this.removeDir(filePath)
+                  if (!fs.existsSync(filePath)) {
+                    resolve(true)
+                  } else if (fs.lstatSync(filePath).isDirectory()) {
+                    fs.rmSync(filePath, { force: true, recursive: true })
                     resolve(true)
                   } else {
                     resolve(false)
-                    console.error(err)
-                    return
+                    logger.error(err)
                   }
+                } else {
+                  resolve(true)
                 }
-                resolve(true)
               })
             } else {
               resolve(true)
@@ -175,7 +171,7 @@ export class LocalStorage implements StorageProviderInterface {
       })
       let totalSize = 0
       filePaths.forEach((file) => {
-        const stat = fs.statSync(file)
+        const stat = fs.lstatSync(file)
         totalSize += stat.size
       })
       res.name = res.key.replace(`${dirPath}`, '').split(path.sep)[0]
@@ -183,12 +179,9 @@ export class LocalStorage implements StorageProviderInterface {
       res.url = this.getSignedUrl(res.key, 3600, null).url
       res.size = this.formatBytes(totalSize)
     } else {
-      // const regex = /(?:.*)\/(?<name>.*)\.(?<extension>.*)/g
-      // const query = regex.exec(res.key)
-
       res.type = path.extname(res.key).substring(1) // remove '.' from extension
       res.name = path.basename(res.key, '.' + res.type)
-      res.size = this.formatBytes(fs.statSync(pathString).size)
+      res.size = this.formatBytes(fs.lstatSync(pathString).size)
       res.url = signedUrl.url + path.sep + signedUrl.fields.Key
     }
 
@@ -211,38 +204,30 @@ export class LocalStorage implements StorageProviderInterface {
   }
 
   /**
-   * @author Abhishek Pathak
-   * @param current
-   * @param destination
+   * @author Nayankumar Patel
+   * @param oldName
+   * @param oldPath
+   * @param newName
+   * @param newPath
    * @param isCopy
-   * @param renameTo
    * @returns
    */
   moveObject = async (
-    current: string,
-    destination: string,
-    isCopy = false,
-    renameTo: string = null!
+    oldName: string,
+    newName: string,
+    oldPath: string,
+    newPath: string,
+    isCopy = false
   ): Promise<boolean> => {
-    const contentpath = path.join(this.PATH_PREFIX)
-    let fileName = renameTo != null ? renameTo : path.basename(current)
-    let fileCount = 1
-    const file = fileName.split('.')
-    current = path.join(contentpath, current)
-    destination = path.join(contentpath, destination)
-    while (fs.existsSync(path.join(destination, fileName))) {
-      fileName = ''
-      for (let i = 0; i < file.length - 1; i++) fileName += file[i]
-      fileName = `${fileName}(${fileCount}).${file[file.length - 1]}`
-      fileCount++
-    }
+    const oldFilePath = path.join(this.PATH_PREFIX, oldPath, oldName)
+    const newFilePath = path.join(this.PATH_PREFIX, newPath, newName)
+
     try {
-      isCopy
-        ? await fs.promises.copyFile(current, path.join(destination, fileName))
-        : await fs.promises.rename(current, path.join(destination, fileName))
+      isCopy ? copyRecursiveSync(oldFilePath, newFilePath) : fs.renameSync(oldFilePath, newFilePath)
     } catch (err) {
       return false
     }
+
     return true
   }
 }

@@ -1,25 +1,18 @@
 import { Engine } from '../../ecs/classes/Engine'
-import { EngineEvents } from '../../ecs/classes/EngineEvents'
-import { EngineActionType } from '../../ecs/classes/EngineService'
+import { EngineRenderer } from '../../renderer/WebGLRendererSystem'
 import { isClient } from './isClient'
 import { nowMilliseconds } from './nowMilliseconds'
 import { ServerLoop } from './ServerLoop'
 
-type TimerUpdateCallback = (delta: number, elapsedTime: number) => any
+/**
+ * @param elapsedTime The elapsed time in seconds
+ */
+type TimerUpdateCallback = (elapsedTime: number) => any
 
 const TPS_REPORTS_ENABLED = false
 const TPS_REPORT_INTERVAL_MS = 10000
 
-const TimerConfig = {
-  MAX_DELTA: 1 / 10
-}
-
-export function Timer(update: TimerUpdateCallback, _config: Partial<typeof TimerConfig> = {}) {
-  const config = Object.assign({}, TimerConfig, _config)
-
-  let lastTime = null
-  let elapsedTime = 0
-  let delta = 0
+export function Timer(update: TimerUpdateCallback) {
   let debugTick = 0
 
   const newEngineTicks = {
@@ -50,18 +43,11 @@ export function Timer(update: TimerUpdateCallback, _config: Partial<typeof Timer
       tpsPrintReport(time)
     }
 
-    Engine.xrFrame = xrFrame
-    if (lastTime !== null) {
-      delta = Math.min((time - lastTime) / 1000, config.MAX_DELTA)
+    Engine.instance.xrFrame = xrFrame
 
-      elapsedTime += delta
-
-      tpsSubMeasureStart('update')
-      update(delta, elapsedTime)
-      tpsSubMeasureEnd('update')
-    }
-
-    lastTime = time
+    tpsSubMeasureStart('update')
+    update(time)
+    tpsSubMeasureEnd('update')
   }
 
   const tpsMeasureStartData = new Map<string, { time: number; ticks: number }>()
@@ -141,14 +127,11 @@ export function Timer(update: TimerUpdateCallback, _config: Partial<typeof Timer
   }
 
   function start() {
-    elapsedTime = 0
-    lastTime = null
     if (isClient) {
-      Engine.renderer.setAnimationLoop(onFrame)
+      EngineRenderer.instance.renderer.setAnimationLoop(onFrame)
     } else {
       const _update = () => {
-        const time = nowMilliseconds()
-        onFrame(time, null)
+        onFrame(nowMilliseconds(), null)
       }
       serverLoop = new ServerLoop(_update, 60).start()
     }
@@ -157,7 +140,7 @@ export function Timer(update: TimerUpdateCallback, _config: Partial<typeof Timer
 
   function stop() {
     if (isClient) {
-      Engine.renderer.setAnimationLoop(null)
+      EngineRenderer.instance.renderer.setAnimationLoop(null)
     } else {
       serverLoop.stop()
     }

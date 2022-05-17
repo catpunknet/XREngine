@@ -1,14 +1,12 @@
-@use "../theme.scss" as theme;
-
 .controlsText {
   position: fixed;
-  bottom: 0px;
+  bottom: 0;
   left: 0;
   pointer-events: none;
-  color: theme.$text2;
+  color: var(--textColor);
   padding: 8px;
   height: 30px;
-  background: theme.$panel2;
+  background: var(--dockBackground);
   width: 100vw;
   z-index: 1000;
   text-align: right;

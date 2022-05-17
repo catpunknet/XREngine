@@ -3,20 +3,14 @@ import { Id, NullableId, Params, ServiceMethods } from '@feathersjs/feathers'
 import _ from 'lodash'
 import Sequelize, { Op } from 'sequelize'
 
+import { InstanceServerProvisionResult } from '@xrengine/common/src/interfaces/InstanceServerProvisionResult'
+
 import { Application } from '../../../declarations'
 import config from '../../appconfig'
 import logger from '../../logger'
 import getLocalServerIp from '../../util/get-local-server-ip'
 
 const releaseRegex = /^([a-zA-Z0-9]+)-/
-
-interface Data {}
-
-interface ServiceOptions {}
-interface GameserverAddress {
-  ipAddress: string | null
-  port: string | null
-}
 
 const gsNameRegex = /gameserver-([a-zA-Z0-9]{5}-[a-zA-Z0-9]{5})/
 const pressureThresholdPercent = 0.8
@@ -30,7 +24,7 @@ export async function getFreeGameserver(
   iteration: number,
   locationId: string,
   channelId: string
-): Promise<any> {
+): Promise<InstanceServerProvisionResult> {
   await app.service('instance').Model.destroy({
     where: {
       assigned: true,
@@ -42,19 +36,14 @@ export async function getFreeGameserver(
   if (!config.kubernetes.enabled) {
     //Clear any instance assignments older than 30 seconds - those assignments have not been
     //used, so they should be cleared and the GS they were attached to can be used for something else.
-    console.log('Local server spinning up new instance')
+    logger.info('Local server spinning up new instance')
     const localIp = await getLocalServerIp(channelId != null)
     const stringIp = `${localIp.ipAddress}:${localIp.port}`
     return checkForDuplicatedAssignments(app, stringIp, iteration, locationId, channelId)
   }
-  console.log('Getting free gameserver')
-  const serverResult = await (app as any).k8AgonesClient.listNamespacedCustomObject(
-    'agones.dev',
-    'v1',
-    'default',
-    'gameservers'
-  )
-  const readyServers = _.filter(serverResult.body!.items, (server: any) => {
+  logger.info('Getting free gameserver')
+  const serverResult = await app.k8AgonesClient.listNamespacedCustomObject('agones.dev', 'v1', 'default', 'gameservers')
+  const readyServers = _.filter((serverResult.body as any).items, (server: any) => {
     const releaseMatch = releaseRegex.exec(server.metadata.name)
     return server.status.state === 'Ready' && releaseMatch != null && releaseMatch[1] === config.server.releaseName
   })
@@ -73,10 +62,10 @@ export async function getFreeGameserver(
   const instanceIpAddress = nonAssignedInstances[Math.floor(Math.random() * nonAssignedInstances.length)]
   if (instanceIpAddress == null) {
     return {
-      id: null,
-      ipAddress: null,
-      port: null,
-      podName: null
+      id: null!,
+      ipAddress: null!,
+      port: null!,
+      podName: null!
     }
   }
   const split = instanceIpAddress.split(':')
@@ -94,7 +83,7 @@ export async function checkForDuplicatedAssignments(
   locationId: string,
   channelId: string,
   podName = undefined as undefined | string
-) {
+): Promise<InstanceServerProvisionResult> {
   //Create an assigned instance at this IP
   const assignResult: any = await app.service('instance').create({
     ipAddress: ipAddress,
@@ -133,12 +122,12 @@ export async function checkForDuplicatedAssignments(
       if (iteration < 10) {
         return getFreeGameserver(app, iteration + 1, locationId, channelId)
       } else {
-        console.log('Made 10 attempts to get free gameserver without success, returning null')
+        logger.info('Made 10 attempts to get free gameserver without success, returning null')
         return {
-          id: null,
-          ipAddress: null,
-          port: null,
-          podName: null
+          id: null!,
+          ipAddress: null!,
+          port: null!,
+          podName: null!
         }
       }
     }
@@ -158,11 +147,11 @@ export async function checkForDuplicatedAssignments(
  *
  * @author Vyacheslav Solovjov
  */
-export class InstanceProvision implements ServiceMethods<Data> {
+export class InstanceProvision implements ServiceMethods<any> {
   app: Application
-  options: ServiceOptions
+  options: any
   docs: any
-  constructor(options: ServiceOptions = {}, app: Application) {
+  constructor(options = {}, app: Application) {
     this.options = options
     this.app = app
   }
@@ -187,7 +176,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
         }
       }
     })
-    const instanceModel = (this.app.service('instance') as any).Model
+    const instanceModel = this.app.service('instance').Model
     const instanceUserSort = _.orderBy(availableLocationInstances, ['currentUsers'], ['desc'])
     const nonPressuredInstances = instanceUserSort.filter((instance: typeof instanceModel) => {
       return instance.currentUsers < pressureThresholdPercent * instance.location.maxUsersPerInstance
@@ -231,17 +220,17 @@ export class InstanceProvision implements ServiceMethods<Data> {
    */
 
   async gsCleanup(instance): Promise<boolean> {
-    const gameservers = await (this.app as any).k8AgonesClient.listNamespacedCustomObject(
+    const gameservers = await this.app.k8AgonesClient.listNamespacedCustomObject(
       'agones.dev',
       'v1',
       'default',
       'gameservers'
     )
-    const gsIds = gameservers?.body?.items.map((gs) =>
+    const gsIds = (gameservers?.body as any)?.items.map((gs) =>
       gsNameRegex.exec(gs.metadata.name) != null ? gsNameRegex.exec(gs.metadata.name)![1] : null!
     )
     const [ip, port] = instance.ipAddress.split(':')
-    const match = gameservers?.body?.items?.find((gs) => {
+    const match = (gameservers?.body as any)?.items?.find((gs) => {
       const inputPort = gs.status.ports?.find((port) => port.name === 'default')
       return gs.status.address === ip && inputPort?.port?.toString() === port
     })
@@ -286,8 +275,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
    * @author Vyacheslav Solovjov
    */
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async find(params?: Params): Promise<any> {
+  async find(params?: Params): Promise<InstanceServerProvisionResult> {
     try {
       let userId
       const locationId = params?.query?.locationId
@@ -308,7 +296,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
             throw new BadRequest('Invalid user credentials')
           }
         }
-        const channelInstance = await (this.app.service('instance') as any).Model.findOne({
+        const channelInstance = await this.app.service('instance').Model.findOne({
           where: {
             channelId: channelId,
             ended: false
@@ -418,17 +406,17 @@ export class InstanceProvision implements ServiceMethods<Data> {
         //     }
         //   }
         // }
-        const friendsAtLocationResult = await (this.app.service('user') as any).Model.findAndCountAll({
+        const friendsAtLocationResult = await this.app.service('user').Model.findAndCountAll({
           include: [
             {
-              model: (this.app.service('user-relationship') as any).Model,
+              model: this.app.service('user-relationship').Model,
               where: {
                 relatedUserId: userId,
                 userRelationshipType: 'friend'
               }
             },
             {
-              model: (this.app.service('instance') as any).Model,
+              model: this.app.service('instance').Model,
               where: {
                 locationId: locationId,
                 ended: false
@@ -473,14 +461,14 @@ export class InstanceProvision implements ServiceMethods<Data> {
             port: ipAddressSplit[1]
           }
         }
-        const availableLocationInstances = await (this.app.service('instance') as any).Model.findAll({
+        const availableLocationInstances = await this.app.service('instance').Model.findAll({
           where: {
             locationId: location.id,
             ended: false
           },
           include: [
             {
-              model: (this.app.service('location') as any).Model,
+              model: this.app.service('location').Model,
               where: {
                 maxUsersPerInstance: {
                   [Op.gt]: Sequelize.col('instance.currentUsers')
@@ -488,7 +476,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
               }
             },
             {
-              model: (this.app.service('instance-authorized-user') as any).Model,
+              model: this.app.service('instance-authorized-user').Model,
               required: false
             }
           ]
@@ -517,7 +505,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
    * @returns id and text
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async get(id: Id, params?: Params): Promise<Data> {
+  async get(id: Id, params?: Params): Promise<any> {
     return {
       id,
       text: `A new message with ID: ${id}!`
@@ -532,7 +520,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
    * @returns data of instance
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async create(data: Data, params?: Params): Promise<Data> {
+  async create(data: any, params?: Params): Promise<any> {
     if (Array.isArray(data)) {
       return Promise.all(data.map((current) => this.create(current, params)))
     }
@@ -548,7 +536,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
    * @returns data of updated instance
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async update(id: NullableId, data: Data, params?: Params): Promise<Data> {
+  async update(id: NullableId, data: any, params?: Params): Promise<any> {
     return data
   }
 
@@ -559,7 +547,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
    * @param params
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async patch(id: NullableId, data: Data, params?: Params): Promise<Data> {
+  async patch(id: NullableId, data: any, params?: Params): Promise<any> {
     return data
   }
 
@@ -571,7 +559,7 @@ export class InstanceProvision implements ServiceMethods<Data> {
    * @returns id
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async remove(id: NullableId, params?: Params): Promise<Data> {
+  async remove(id: NullableId, params?: Params): Promise<any> {
     return { id }
   }
 }

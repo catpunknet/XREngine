@@ -8,7 +8,7 @@ import TableComponent from '../../common/Table'
 import { routeColumns } from '../../common/variables/route'
 import { ActiveRouteService, useActiveRouteState } from '../../services/ActiveRouteService'
 import { RouteService, useRouteState } from '../../services/RouteService'
-import { useStyles } from '../../styles/ui'
+import styles from '../../styles/admin.module.scss'
 
 /**
  * Temporary
@@ -22,7 +22,6 @@ const ROUTE_PAGE_LIMIT = 1000
  */
 
 const RouteTable = () => {
-  const classes = useStyles()
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(ROUTE_PAGE_LIMIT)
 
@@ -87,7 +86,8 @@ const RouteTable = () => {
           route: route.value,
           action: (
             <Checkbox
-              className={classes.checkboxContainer}
+              className={styles.checkboxContainer}
+              classes={{ checked: styles.routeCheckedCheckbox }}
               checked={isRouteActive(el.project.value, route.value)}
               onChange={(ev, checked) => activateCallback(el.project.value, route.value, checked)}
             />
@@ -100,6 +100,7 @@ const RouteTable = () => {
   return (
     <React.Fragment>
       <TableComponent
+        allowSort={true}
         rows={installedRoutes}
         column={routeColumns}
         page={page}
@@ -109,8 +110,8 @@ const RouteTable = () => {
         handleRowsPerPageChange={handleRowsPerPageChange}
       />
       {processing && (
-        <div className={classes.progressBackground}>
-          <CircularProgress className={classes.progress} />
+        <div className={styles.progressBackground}>
+          <CircularProgress className={styles.progress} />
         </div>
       )}
     </React.Fragment>

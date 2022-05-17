@@ -4,17 +4,17 @@ import { useTranslation } from 'react-i18next'
 import { getComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { PostprocessingComponent } from '@xrengine/engine/src/scene/components/PostprocessingComponent'
 import { Effects } from '@xrengine/engine/src/scene/constants/PostProcessing'
-import { updatePostProcessing } from '@xrengine/engine/src/scene/functions/loaders/PostprocessingFunctions'
 
 import LooksIcon from '@mui/icons-material/Looks'
 import Checkbox from '@mui/material/Checkbox'
 
-import { CommandManager } from '../../managers/CommandManager'
+import { setPropertyOnSelectionEntities } from '../../classes/History'
 import BooleanInput from '../inputs/BooleanInput'
 import ColorInput from '../inputs/ColorInput'
 import CompoundNumericInput from '../inputs/CompoundNumericInput'
 import InputGroup from '../inputs/InputGroup'
 import SelectInput from '../inputs/SelectInput'
+import styles from '../styles.module.scss'
 import NodeEditor from './NodeEditor'
 import { EditorComponentType } from './Util'
 
@@ -23,7 +23,10 @@ enum PropertyTypes {
   Number,
   Boolean,
   Color,
-  KernelSize
+  KernelSize,
+  SMAAPreset,
+  EdgeDetectionMode,
+  PredicationMode
 }
 
 type EffectPropertyDetail = { propertyType: PropertyTypes; name: string; min?: number; max?: number; step?: number }
@@ -31,8 +34,14 @@ type EffectPropertiesType = { [key: string]: EffectPropertyDetail }
 type EffectOptionsType = { [key in Effects]: EffectPropertiesType }
 
 const EffectsOptions: EffectOptionsType = {
-  FXAAEffect: {
-    blendFunction: { propertyType: PropertyTypes.BlendFunction, name: 'Blend Function' }
+  // FXAAEffect: {
+  //   blendFunction: { propertyType: PropertyTypes.BlendFunction, name: 'Blend Function' }
+  // },
+  SMAAEffect: {
+    blendFunction: { propertyType: PropertyTypes.BlendFunction, name: 'Blend Function' },
+    preset: { propertyType: PropertyTypes.SMAAPreset, name: 'Preset' },
+    edgeDetectionMode: { propertyType: PropertyTypes.EdgeDetectionMode, name: 'Edge Detection Mode' },
+    predicationMode: { propertyType: PropertyTypes.PredicationMode, name: 'Predication Mode' }
   },
   OutlineEffect: {
     blendFunction: { propertyType: PropertyTypes.BlendFunction, name: 'Blend Function' },
@@ -136,6 +145,25 @@ const KernelSizeSelect = [
   { label: 'HUGE', value: 5 }
 ]
 
+const SMAAPreset = [
+  { label: 'LOW', value: 0 },
+  { label: 'MEDIUM', value: 1 },
+  { label: 'HIGH', value: 2 },
+  { label: 'ULTRA', value: 3 }
+]
+
+const EdgeDetectionMode = [
+  { label: 'DEPTH', value: 0 },
+  { label: 'LUMA', value: 1 },
+  { label: 'COLOR', value: 2 }
+]
+
+const PredicationMode = [
+  { label: 'DISABLED', value: 0 },
+  { label: 'DEPTH', value: 1 },
+  { label: 'CUSTOM', value: 2 }
+]
+
 /**
  * @author Abhishek Pathak <abhi.pathak401@gmail.com>
  */
@@ -143,14 +171,14 @@ export const PostProcessingNodeEditor: EditorComponentType = (props) => {
   const { t } = useTranslation()
 
   const onChangeCheckBox = (e: ChangeEvent<HTMLInputElement>, effect: Effects) => {
-    CommandManager.instance.setPropertyOnSelectionEntities({
+    setPropertyOnSelectionEntities({
       component: PostprocessingComponent,
       properties: { ['options.' + effect + '.isActive']: e.target.checked }
     })
   }
 
   const onChangeNodeSetting = (propertyPath: string, value: any) => {
-    CommandManager.instance.setPropertyOnSelectionEntities({
+    setPropertyOnSelectionEntities({
       component: PostprocessingComponent,
       properties: { ['options.' + propertyPath]: value }
     })
@@ -198,6 +226,7 @@ export const PostProcessingNodeEditor: EditorComponentType = (props) => {
       case PropertyTypes.BlendFunction:
         renderVal = (
           <SelectInput
+            key={props.node.entity}
             options={BlendFunctionSelect}
             onChange={(value) => onChangeNodeSetting(propertyPath.join('.'), value)}
             value={getPropertyValue(propertyPath)}
@@ -218,7 +247,41 @@ export const PostProcessingNodeEditor: EditorComponentType = (props) => {
       case PropertyTypes.KernelSize:
         renderVal = (
           <SelectInput
+            key={props.node.entity}
             options={KernelSizeSelect}
+            onChange={(value) => onChangeNodeSetting(propertyPath.join('.'), value)}
+            value={getPropertyValue(propertyPath)}
+          />
+        )
+        break
+
+      case PropertyTypes.SMAAPreset:
+        renderVal = (
+          <SelectInput
+            key={props.node.entity}
+            options={SMAAPreset}
+            onChange={(value) => onChangeNodeSetting(propertyPath.join('.'), value)}
+            value={getPropertyValue(propertyPath)}
+          />
+        )
+        break
+
+      case PropertyTypes.EdgeDetectionMode:
+        renderVal = (
+          <SelectInput
+            key={props.node.entity}
+            options={EdgeDetectionMode}
+            onChange={(value) => onChangeNodeSetting(propertyPath.join('.'), value)}
+            value={getPropertyValue(propertyPath)}
+          />
+        )
+        break
+
+      case PropertyTypes.PredicationMode:
+        renderVal = (
+          <SelectInput
+            key={props.node.entity}
+            options={PredicationMode}
             onChange={(value) => onChangeNodeSetting(propertyPath.join('.'), value)}
             value={getPropertyValue(propertyPath)}
           />
@@ -254,11 +317,12 @@ export const PostProcessingNodeEditor: EditorComponentType = (props) => {
       return (
         <div key={effect}>
           <Checkbox
+            classes={{ checked: styles.checkbox }}
             onChange={(e) => onChangeCheckBox(e, effect)}
-            checked={postprocessingComponent.options[effect].isActive}
+            checked={postprocessingComponent.options[effect]?.isActive}
           />
-          <span style={{ color: '#9FA4B5' }}>{effect}</span>
-          {postprocessingComponent.options[effect].isActive && <div>{renderEffectsTypes(effect)}</div>}
+          <span style={{ color: 'var(--textColor)' }}>{effect}</span>
+          {postprocessingComponent.options[effect]?.isActive && <div>{renderEffectsTypes(effect)}</div>}
         </div>
       )
     })

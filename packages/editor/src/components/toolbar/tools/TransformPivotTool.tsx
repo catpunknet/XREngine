@@ -1,14 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 
-import { getComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
-import { TransformPivot, TransformPivotType } from '@xrengine/engine/src/scene/constants/transformConstants'
+import { TransformPivot } from '@xrengine/engine/src/scene/constants/transformConstants'
 
 import AdjustIcon from '@mui/icons-material/Adjust'
 
-import { EditorControlComponent } from '../../../classes/EditorControlComponent'
-import { SceneManager } from '../../../managers/SceneManager'
-import { useModeState } from '../../../services/ModeServices'
-import { setTransformPivot, toggleTransformPivot } from '../../../systems/EditorControlSystem'
+import { setTransformPivot, toggleTransformPivot } from '../../../functions/transformFunctions'
+import { useEditorHelperState } from '../../../services/EditorHelperState'
 import SelectInput from '../../inputs/SelectInput'
 import { InfoTooltip } from '../../layout/Tooltip'
 import * as styles from '../styles.module.scss'
@@ -24,43 +21,21 @@ const transformPivotOptions = [
 ]
 
 const TransformPivotTool = () => {
-  const modeState = useModeState()
-  const initializeRef = React.useRef<boolean>(false)
-  const [transformPivot, changeTransformPivot] = useState<TransformPivotType>(TransformPivot.Selection)
-
-  useEffect(() => {
-    if (initializeRef.current) {
-      updateTransformPivot()
-    } else {
-      initializeRef.current = true
-    }
-  }, [modeState.transformPivotModeChanged.value])
-
-  const updateTransformPivot = () => {
-    const editorControlComponent = getComponent(SceneManager.instance.editorEntity, EditorControlComponent)
-    changeTransformPivot(editorControlComponent.transformPivot)
-  }
-
-  const onChangeTransformPivot = (transformPivot) => {
-    setTransformPivot(transformPivot)
-  }
-
-  const onToggleTransformPivot = () => {
-    toggleTransformPivot()
-  }
+  const editorHelperState = useEditorHelperState()
 
   return (
     <div className={styles.toolbarInputGroup} id="transform-pivot">
       <InfoTooltip title="[X] Toggle Transform Pivot">
-        <button onClick={onToggleTransformPivot} className={styles.toolButton}>
+        <button onClick={toggleTransformPivot as any} className={styles.toolButton}>
           <AdjustIcon fontSize="small" />
         </button>
       </InfoTooltip>
       <SelectInput
+        key={editorHelperState.transformPivot.value}
         className={styles.selectInput}
-        onChange={onChangeTransformPivot}
+        onChange={setTransformPivot}
         options={transformPivotOptions}
-        value={transformPivot}
+        value={editorHelperState.transformPivot.value}
         creatable={false}
         isSearchable={false}
       />

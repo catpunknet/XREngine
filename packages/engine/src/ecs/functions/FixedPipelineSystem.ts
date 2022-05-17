@@ -1,5 +1,5 @@
 import { nowMilliseconds } from '../../common/functions/nowMilliseconds'
-import { accessEngineState } from '../classes/EngineService'
+import { getEngineState } from '../classes/EngineState'
 import { World } from '../classes/World'
 import { SystemUpdateType } from './SystemUpdateType'
 
@@ -9,45 +9,51 @@ import { SystemUpdateType } from './SystemUpdateType'
  * @author Gheric Speiginer <github.com/speigg>
  */
 export default async function FixedPipelineSystem(world: World, args: { tickRate: number }) {
-  let accumulator = 0
-
   const timestep = 1 / args.tickRate
-  const limit = timestep * 1000
+  const limit = timestep * 2000
   const updatesLimit = args.tickRate
 
-  return () => {
-    world.fixedDelta = timestep
+  world.fixedDeltaSeconds = timestep
 
+  // If the difference between fixedElapsedTime and elapsedTime becomes too large,
+  // we should simply skip ahead.
+  const maxTimeDifference = 2
+
+  return () => {
     const start = nowMilliseconds()
     let timeUsed = 0
     let updatesCount = 0
 
-    accumulator += world.delta
+    let accumulator = world.elapsedSeconds - world.fixedElapsedSeconds
 
     let accumulatorDepleted = accumulator < timestep
     let timeout = timeUsed > limit
     let updatesLimitReached = updatesCount > updatesLimit
 
     while (!accumulatorDepleted && !timeout && !updatesLimitReached) {
-      world.fixedElapsedTime += world.fixedDelta
-      world.fixedTick += 1
-      accessEngineState().fixedTick.set(world.fixedTick)
+      world.fixedElapsedSeconds += world.fixedDeltaSeconds
+      world.fixedTick = Math.floor(world.fixedElapsedSeconds / world.fixedDeltaSeconds)
+      getEngineState().fixedTick.set(world.fixedTick)
 
       for (const s of world.pipelines[SystemUpdateType.FIXED_EARLY]) s.execute()
       for (const s of world.pipelines[SystemUpdateType.FIXED]) s.execute()
       for (const s of world.pipelines[SystemUpdateType.FIXED_LATE]) s.execute()
 
-      accumulator -= timestep
+      accumulator -= world.fixedDeltaSeconds
       ++updatesCount
 
       timeUsed = nowMilliseconds() - start
-      accumulatorDepleted = accumulator < timestep
+      accumulatorDepleted = accumulator < world.fixedDeltaSeconds
       timeout = timeUsed > limit
       updatesLimitReached = updatesCount >= updatesLimit
     }
 
-    if (!accumulatorDepleted) {
-      accumulator = accumulator % timestep
+    if (updatesLimitReached || accumulator > maxTimeDifference) {
+      console.warn(
+        'FixedPipelineSystem: update limit reached, skipping world.fixedElapsedTime ahead to catch up with world.elapsedTime'
+      )
+      world.fixedElapsedSeconds = world.elapsedSeconds
+      world.fixedTick = Math.floor(world.fixedElapsedSeconds / world.fixedDeltaSeconds)
     }
   }
 }

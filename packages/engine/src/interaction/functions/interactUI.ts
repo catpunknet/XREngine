@@ -11,7 +11,6 @@ import {
   Vector3
 } from 'three'
 
-import isHLS from '@xrengine/engine/src/scene/functions/isHLS'
 import { XRUIComponent } from '@xrengine/engine/src/xrui/components/XRUIComponent'
 
 import { AssetLoader } from '../../assets/classes/AssetLoader'
@@ -57,7 +56,7 @@ export function createInteractUI(modelEntity: Entity) {
   const nameComponent = getComponent(modelEntity, NameComponent)
   addComponent(ui.entity, NameComponent, { name: 'interact-ui-' + nameComponent.name })
 
-  if (!Engine.isEditor) {
+  if (!Engine.instance.isEditor) {
     // for some reason, using the transform component creates extremely jittery transitions
     removeComponent(modelEntity, TransformComponent)
   }
@@ -72,7 +71,7 @@ export function createInteractUI(modelEntity: Entity) {
     const centeringGroup = new Group()
     boundingBoxComponent.box.getCenter(centeringGroup.position)
 
-    Engine.scene.add(centeringGroup)
+    Engine.instance.currentWorld.scene.add(centeringGroup)
     centeringGroup.attach(modelObj)
     c.position.copy(centeringGroup.position)
 
@@ -193,7 +192,7 @@ export function createInteractUI(modelEntity: Entity) {
 const transitionStartTime = new Map<Entity, number>()
 
 export const updateInteractUI = (modelEntity: Entity, xrui: ReturnType<typeof createInteractUI>) => {
-  if (Engine.isEditor) return
+  if (Engine.instance.isEditor) return
 
   const world = useWorld()
   const uiContainer = getComponent(xrui.entity, XRUIComponent)?.container
@@ -221,24 +220,25 @@ export const updateInteractUI = (modelEntity: Entity, xrui: ReturnType<typeof cr
   }
 
   if (nextMode !== currentMode) {
-    transitionStartTime.set(modelEntity, world.elapsedTime)
+    transitionStartTime.set(modelEntity, world.elapsedSeconds)
     xrui.state.mode.set(nextMode)
     if (nextMode === 'interacting') {
-      Engine.camera.attach(uiContainer)
+      Engine.instance.currentWorld.camera.attach(uiContainer)
     } else {
-      Engine.scene.attach(uiContainer)
+      Engine.instance.currentWorld.scene.attach(uiContainer)
     }
     modelGroup.traverse((obj) => {
       const mesh = obj as Mesh<BufferGeometry, MeshBasicMaterial>
       if (mesh.material) {
         mesh.material.transparent = nextMode === 'interacting'
         mesh.renderOrder = nextMode === 'interacting' ? 1 : 0
+        mesh.material.needsUpdate = true
       }
     })
   }
 
   const transitionStart = transitionStartTime.get(modelEntity)
-  const transitionElapsed = transitionStart ? world.elapsedTime - transitionStart : 0
+  const transitionElapsed = transitionStart ? world.elapsedSeconds - transitionStart : 0
   const alpha = Math.min(transitionElapsed / TRANSITION_DURATION, 1)
 
   const root = uiContainer.rootLayer
@@ -270,13 +270,14 @@ export const updateInteractUI = (modelEntity: Entity, xrui: ReturnType<typeof cr
   const linkMat = link.contentMesh.material as MeshBasicMaterial
 
   if (nextMode === 'inactive') {
-    const uiContainerScale = Math.max(1, Engine.camera.position.distanceTo(anchoredPosition)) * 0.8
+    const uiContainerScale =
+      Math.max(1, Engine.instance.currentWorld.camera.position.distanceTo(anchoredPosition)) * 0.8
     uiContainer.position.lerp(anchoredPosition, alpha)
-    uiContainer.quaternion.slerp(_quat.setFromRotationMatrix(Engine.camera.matrix), alpha)
+    uiContainer.quaternion.slerp(_quat.setFromRotationMatrix(Engine.instance.currentWorld.camera.matrix), alpha)
     uiContainer.scale.lerp(_vect.setScalar(uiContainerScale), alpha)
 
-    if (modelGroup.parent !== Engine.scene) {
-      Engine.scene.attach(modelGroup)
+    if (modelGroup.parent !== Engine.instance.currentWorld.scene) {
+      Engine.instance.currentWorld.scene.attach(modelGroup)
     }
 
     modelGroup.position.lerp(anchoredPosition, alpha)
@@ -306,17 +307,18 @@ export const updateInteractUI = (modelEntity: Entity, xrui: ReturnType<typeof cr
       mat.opacity = MathUtils.lerp(mat.opacity, 0, alpha)
     }
   } else if (nextMode === 'active') {
-    const uiContainerScale = Math.max(1, Engine.camera.position.distanceTo(anchoredPosition)) * 0.8
+    const uiContainerScale =
+      Math.max(1, Engine.instance.currentWorld.camera.position.distanceTo(anchoredPosition)) * 0.8
     uiContainer.position.lerp(anchoredPosition, alpha)
-    uiContainer.quaternion.slerp(_quat.setFromRotationMatrix(Engine.camera.matrix), alpha)
+    uiContainer.quaternion.slerp(_quat.setFromRotationMatrix(Engine.instance.currentWorld.camera.matrix), alpha)
     uiContainer.scale.lerp(_vect.setScalar(uiContainerScale), alpha)
 
-    if (modelGroup.parent !== Engine.scene) {
-      Engine.scene.attach(modelGroup)
+    if (modelGroup.parent !== Engine.instance.currentWorld.scene) {
+      Engine.instance.currentWorld.scene.attach(modelGroup)
     }
 
     const modelTargetPosition = _vect.copy(anchoredPosition)
-    modelTargetPosition.y += MODEL_ELEVATION_ACTIVE + Math.sin(world.elapsedTime) * 0.05
+    modelTargetPosition.y += MODEL_ELEVATION_ACTIVE + Math.sin(world.elapsedSeconds) * 0.05
     modelGroup.position.lerp(modelTargetPosition, alpha)
     modelGroup.quaternion.slerp(anchoredRotation, alpha)
     modelGroup.scale.lerp(MODEL_SCALE_ACTIVE, alpha)
@@ -368,7 +370,7 @@ export const updateInteractUI = (modelEntity: Entity, xrui: ReturnType<typeof cr
     }
 
     modelGroup.position.lerp(_vect.setScalar(0), alpha)
-    modelGroup.quaternion.slerp(_quat.copy(Engine.camera.quaternion).invert(), alpha)
+    modelGroup.quaternion.slerp(_quat.copy(Engine.instance.currentWorld.camera.quaternion).invert(), alpha)
     modelGroup.scale.lerp(_vect.setScalar(modelScale), alpha)
 
     rootMat.opacity = MathUtils.lerp(rootMat.opacity, 1, alpha)

@@ -1,9 +1,11 @@
 import { download } from "@xrengine/server-core/src/projects/project/downloadProjects";
+import { createDefaultStorageProvider } from "@xrengine/server-core/src/media/storageprovider/storageprovider";
 import dotenv from 'dotenv';
 import Sequelize from 'sequelize';
 import path from "path";
 import fs from "fs";
 import appRootPath from 'app-root-path'
+import logger from '../packages/server-core/src/logger'
 
 dotenv.config();
 const db = {
@@ -20,11 +22,11 @@ db.url = process.env.MYSQL_URL ??
 
 
 async function installAllProjects() {
-  
   try {
+    createDefaultStorageProvider()
     const localProjectDirectory = path.join(appRootPath.path, 'packages/projects/projects')
     if (!fs.existsSync(localProjectDirectory)) fs.mkdirSync(localProjectDirectory, { recursive: true })
-    console.log('running installAllProjects')
+    logger.info('running installAllProjects')
     const sequelizeClient = new Sequelize({
       ...db,
       define: {
@@ -32,7 +34,7 @@ async function installAllProjects() {
       }
     });
     await sequelizeClient.sync();
-    console.log('inited sequelize client')
+    logger.info('inited sequelize client')
 
     const Projects = sequelizeClient.define('project', {
       id: {
@@ -48,12 +50,13 @@ async function installAllProjects() {
 
     
     const projects = await Projects.findAll()
-    console.log('found projects', projects)
+    logger.info('found projects', projects)
     await Promise.all(projects.map((project) => download(project.name)))
+    process.exit(0)
   } catch (e) {
-    console.log(e)
+    logger.fatal(e)
   }
 
-};
+}
 
 installAllProjects();

@@ -12,8 +12,8 @@ export const Button = styled.button.attrs((props) => ({
   display: flex;
   border: none;
   border-radius: 4px;
-  background: ${(props) => props.theme.blue};
-  color: ${(props) => props.theme.white};
+  background: var(--buttonFilled);
+  color: var(--white);
   white-space: nowrap;
   min-height: 24px;
   font-size: 15px;
@@ -28,21 +28,20 @@ export const Button = styled.button.attrs((props) => ({
   margin-right: 15px;
 
   &:hover {
-    color: ${(props) => props.theme.text};
-    background-color: ${(props) => props.theme.bluePressed};
+    color: var(--textColor);
+    opacity: 0.8;
   }
 
   &:active {
-    color: ${(props) => props.theme.text};
-    background-color: ${(props) => props.theme.bluePressed};
+    color: var(--textColor);
   }
 
   &:disabled {
-    background: ${(props) => props.theme.disabled};
-    color: ${(props) => props.theme.disabledText};
+    background: var(--disabled);
+    color: var(--disabledText);
 
     &:hover {
-      background-color: ${(props) => props.theme.disabled};
+      background-color: var(--disabled);
     }
   }
 `
@@ -78,20 +77,20 @@ export const LargeButton = styled(Button)`
  * @type {Styled component}
  */
 export const SecondaryButton = styled(Button)`
-  background-color: ${(props) => props.theme.hover};
-  color: ${(props) => props.theme.text};
+  background-color: var(--buttonFilled);
+  color: var(--textColor);
 
   &:hover {
-    background-color: ${(props) => props.theme.text2};
+    opacity: 0.8;
   }
 
   &:active {
-    background-color: ${(props) => props.theme.text2};
+    opacity: 0.8;
   }
 
   &:disabled {
-    background-color: ${(props) => props.theme.disabled};
-    color: ${(props) => props.theme.disabledText};
+    background-color: var(--disabled);
+    color: var(--disabledText);
 
     &:hover {
       background-color: transparent;
@@ -106,23 +105,23 @@ export const SecondaryButton = styled(Button)`
  * @type {styled component}
  */
 export const MenuButton = styled(Button)`
-  background-color: transparent;
-  color: ${(props) => props.theme.text2};
+  background-color: buttonFilled;
+  color: var(--textColor);
   padding: 1px 8px;
   width: 20px;
   margin-right: 0px;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    opacity: 0.8;
   }
 
   &:active {
-    background-color: rgba(255, 255, 255, 0.2);
+    opacity: 0.8;
   }
 
   &:disabled {
-    background-color: transparent;
-    color: ${(props) => props.theme.disabledText};
+    background-color: var(--disabled);
+    color: var(--disabledText);
 
     &:hover {
       background-color: transparent;

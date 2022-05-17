@@ -1,26 +1,43 @@
+import { pipe } from '@xrengine/common/src/utils/pipe'
 import { Application } from '@xrengine/server-core/declarations'
 import config from '@xrengine/server-core/src/appconfig'
-import logger from '@xrengine/server-core/src/logger'
+import {
+  configureK8s,
+  configureOpenAPI,
+  configureRedis,
+  configureSocketIO,
+  createFeathersExpressApp
+} from '@xrengine/server-core/src/createApp'
+import multiLogger from '@xrengine/server-core/src/logger'
 
-import { createApp } from './app'
 import collectAnalytics from './collect-analytics'
 
+const logger = multiLogger.child({ component: 'analytics' })
+
 process.on('unhandledRejection', (error, promise) => {
-  console.error('UNHANDLED REJECTION - Promise: ', promise, ', Error: ', error, ').')
+  logger.error(error, 'UNHANDLED REJECTION - Promise: %o', promise)
 })
 
+const analyticsServerPipe = pipe(configureSocketIO())
+
 export const start = async (): Promise<Application> => {
-  const app = createApp()
+  const app = createFeathersExpressApp(analyticsServerPipe)
+
+  app.set('host', config.server.local ? config.server.hostname + ':' + config.server.port : config.server.hostname)
+  app.set('port', config.server.port)
 
   collectAnalytics(app)
-  console.log('Analytics server running')
+  logger.info('Analytics server running.')
 
   const port = config.analytics.port || 5050
 
   await app.listen(port)
 
-  console.log('Started listening on', port)
-  process.on('unhandledRejection', (reason, p) => logger.error('Unhandled Rejection at: Promise ', p, reason))
+  logger.info('Started listening on ' + port)
+
+  process.on('unhandledRejection', (error, promise) => {
+    logger.error(error, 'UNHANDLED REJECTION - Promise: %o', promise)
+  })
 
   return app
 }

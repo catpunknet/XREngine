@@ -9,4 +9,10 @@ export interface ClientSettingInterface {
   favicon16px: string
   icon192px: string
   icon512px: string
+  appBackground: string
+  appTitle: string
+  appSubtitle: string
+  appDescription: string
+  appSocialLinks: string
+  themeSettings: string
 }

@@ -12,69 +12,32 @@ import {
   VSMShadowMap
 } from 'three'
 
-import { getDirectoryFromUrl } from '@xrengine/common/src/utils/getDirectoryFromUrl'
 import { DistanceModel, DistanceModelOptions } from '@xrengine/engine/src/audio/constants/AudioConstants'
-import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineService'
 import { getComponent, hasComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { PositionalAudioSettingsComponent } from '@xrengine/engine/src/scene/components/AudioSettingsComponent'
-import { EnvmapComponent } from '@xrengine/engine/src/scene/components/EnvmapComponent'
-import { ErrorComponent } from '@xrengine/engine/src/scene/components/ErrorComponent'
 import { FogComponent } from '@xrengine/engine/src/scene/components/FogComponent'
 import { MetaDataComponent } from '@xrengine/engine/src/scene/components/MetaDataComponent'
 import { RenderSettingComponent } from '@xrengine/engine/src/scene/components/RenderSettingComponent'
 import { SimpleMaterialTagComponent } from '@xrengine/engine/src/scene/components/SimpleMaterialTagComponent'
-import { EnvMapSourceType, EnvMapTextureType } from '@xrengine/engine/src/scene/constants/EnvMapEnum'
 import { FogType } from '@xrengine/engine/src/scene/constants/FogType'
+import { SCENE_COMPONENT_SIMPLE_MATERIALS } from '@xrengine/engine/src/scene/functions/loaders/SimpleMaterialFunctions'
 
 import LanguageIcon from '@mui/icons-material/Language'
 
+import { executeCommandWithHistoryOnSelection } from '../../classes/History'
 import { TagComponentOperation } from '../../commands/TagComponentCommand'
 import EditorCommands from '../../constants/EditorCommands'
-import { CommandManager } from '../../managers/CommandManager'
 import BooleanInput from '../inputs/BooleanInput'
 import ColorInput from '../inputs/ColorInput'
 import CompoundNumericInput from '../inputs/CompoundNumericInput'
-import FolderInput from '../inputs/FolderInput'
-import ImageInput from '../inputs/ImageInput'
 import InputGroup from '../inputs/InputGroup'
 import NumericInputGroup from '../inputs/NumericInputGroup'
 import SelectInput from '../inputs/SelectInput'
 import StringInput from '../inputs/StringInput'
 import Vector3Input from '../inputs/Vector3Input'
+import EnvMapEditor from './EnvMapEditor'
 import NodeEditor from './NodeEditor'
 import { EditorComponentType, updateProperty } from './Util'
-
-/**
- * EnvMapSourceOptions array containing SourceOptions for Envmap
- */
-const EnvMapSourceOptions = [
-  {
-    label: 'Default',
-    value: EnvMapSourceType.Default
-  },
-  {
-    label: 'Texture',
-    value: EnvMapSourceType.Texture
-  },
-  {
-    label: 'Color',
-    value: EnvMapSourceType.Color
-  }
-]
-
-/**
- * EnvMapSourceOptions array containing SourceOptions for Envmap
- */
-const EnvMapTextureOptions = [
-  {
-    label: 'Cubemap',
-    value: EnvMapTextureType.Cubemap
-  },
-  {
-    label: 'Equirectangular',
-    value: EnvMapTextureType.Equirectangular
-  }
-]
 
 /**
  * FogTypeOptions array containing fogType options.
@@ -135,7 +98,7 @@ const ToneMappingOptions = [
 const ShadowTypeOptions = [
   {
     label: 'No Shadow Map',
-    value: undefined
+    value: -1
   },
   {
     label: 'Basic Shadow Map',
@@ -165,34 +128,21 @@ const ShadowTypeOptions = [
 export const SceneNodeEditor: EditorComponentType = (props) => {
   const { t } = useTranslation()
   const entity = props.node.entity
-  const engineState = useEngineState()
-
-  const onChangeCubemapURLSource = useCallback((value) => {
-    const directory = getDirectoryFromUrl(value)
-    if (directory !== envmapComponent.envMapSourceURL) {
-      CommandManager.instance.setPropertyOnSelectionEntities({
-        component: EnvmapComponent,
-        properties: { envMapSourceURL: directory }
-      })
-    }
-  }, [])
 
   const onChangeUseSimpleMaterials = useCallback((value) => {
-    CommandManager.instance.executeCommandWithHistoryOnSelection(EditorCommands.TAG_COMPONENT, {
+    executeCommandWithHistoryOnSelection(EditorCommands.TAG_COMPONENT, {
       operation: {
         component: SimpleMaterialTagComponent,
+        sceneComponentName: SCENE_COMPONENT_SIMPLE_MATERIALS,
         type: value ? TagComponentOperation.ADD : TagComponentOperation.REMOVE
       }
     })
   }, [])
 
   const metadata = getComponent(entity, MetaDataComponent)
-  const envmapComponent = getComponent(entity, EnvmapComponent)
   const fogComponent = getComponent(entity, FogComponent)
   const audioComponent = getComponent(entity, PositionalAudioSettingsComponent)
   const renderSettingComponent = getComponent(entity, RenderSettingComponent)
-  const hasError = engineState.errorEntities[entity].get()
-  const errorComponent = getComponent(entity, ErrorComponent)
 
   return (
     <NodeEditor
@@ -203,55 +153,10 @@ export const SceneNodeEditor: EditorComponentType = (props) => {
       <InputGroup name="Metadata" label="Metadata">
         <StringInput value={metadata.meta_data} onChange={updateProperty(MetaDataComponent, 'meta_data')} />
       </InputGroup>
-      <InputGroup name="Envmap Source" label="Envmap Source">
-        <SelectInput
-          options={EnvMapSourceOptions}
-          value={envmapComponent.type}
-          onChange={updateProperty(EnvmapComponent, 'type')}
-        />
-      </InputGroup>
-      {envmapComponent.type === EnvMapSourceType.Color && (
-        <InputGroup name="EnvMapColor" label="EnvMap Color">
-          <ColorInput value={envmapComponent.envMapSourceColor} onChange={updateProperty(EnvmapComponent, 'type')} />
-        </InputGroup>
-      )}
-      {envmapComponent.type === EnvMapSourceType.Texture && (
-        <div>
-          <InputGroup name="Texture Type" label="Texture Type">
-            <SelectInput
-              options={EnvMapTextureOptions}
-              value={envmapComponent.envMapTextureType}
-              onChange={updateProperty(EnvmapComponent, 'envMapTextureType')}
-            />
-          </InputGroup>
-          <InputGroup name="Texture URL" label="Texture URL">
-            {envmapComponent.envMapTextureType === EnvMapTextureType.Cubemap && (
-              <FolderInput value={envmapComponent.envMapSourceURL} onChange={onChangeCubemapURLSource} />
-            )}
-            {envmapComponent.envMapTextureType === EnvMapTextureType.Equirectangular && (
-              <ImageInput
-                value={envmapComponent.envMapSourceURL}
-                onChange={updateProperty(EnvmapComponent, 'envMapSourceURL')}
-              />
-            )}
-            {hasError && errorComponent.envmapError && (
-              <div style={{ marginTop: 2, color: '#FF8C00' }}>{t('editor:properties.scene.error-url')}</div>
-            )}
-          </InputGroup>
-        </div>
-      )}
-
-      <InputGroup name="EnvMap Intensity" label="EnvMap Intensity">
-        <CompoundNumericInput
-          min={0}
-          max={20}
-          value={envmapComponent.envMapIntensity}
-          onChange={updateProperty(EnvmapComponent, 'envMapIntensity')}
-        />
-      </InputGroup>
-
+      <EnvMapEditor node={props.node} />
       <InputGroup name="Fog Type" label={t('editor:properties.scene.lbl-fogType')}>
         <SelectInput
+          key={props.node.entity}
           options={FogTypeOptions}
           value={fogComponent.type}
           onChange={updateProperty(FogComponent, 'type')}
@@ -312,6 +217,7 @@ export const SceneNodeEditor: EditorComponentType = (props) => {
             info={t('editor:properties.scene.info-avatarDistanceModel')}
           >
             <SelectInput
+              key={props.node.entity}
               options={DistanceModelOptions}
               value={audioComponent.avatarDistanceModel}
               onChange={updateProperty(PositionalAudioSettingsComponent, 'avatarDistanceModel')}
@@ -383,6 +289,7 @@ export const SceneNodeEditor: EditorComponentType = (props) => {
             info={t('editor:properties.scene.info-mediaDistanceModel')}
           >
             <SelectInput
+              key={props.node.entity}
               options={DistanceModelOptions}
               value={audioComponent.mediaDistanceModel}
               onChange={updateProperty(PositionalAudioSettingsComponent, 'mediaDistanceModel')}
@@ -528,6 +435,7 @@ export const SceneNodeEditor: EditorComponentType = (props) => {
             info={t('editor:properties.scene.info-toneMapping')}
           >
             <SelectInput
+              key={props.node.entity}
               options={ToneMappingOptions}
               value={renderSettingComponent.toneMapping}
               onChange={updateProperty(RenderSettingComponent, 'toneMapping')}
@@ -547,13 +455,14 @@ export const SceneNodeEditor: EditorComponentType = (props) => {
             />
           </InputGroup>
           <InputGroup
-            name="Tone Mapping Exposure"
+            name="Shadow Map Type"
             label={t('editor:properties.scene.lbl-shadowMapType')}
             info={t('editor:properties.scene.info-shadowMapType')}
           >
             <SelectInput
+              key={props.node.entity}
               options={ShadowTypeOptions}
-              value={renderSettingComponent.shadowMapType}
+              value={renderSettingComponent.shadowMapType ?? -1}
               onChange={updateProperty(RenderSettingComponent, 'shadowMapType')}
             />
           </InputGroup>

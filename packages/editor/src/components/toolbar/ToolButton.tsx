@@ -11,14 +11,13 @@ const StyledToolButton = (styled as any).button`
   width: 40px;
   height: 40px;
   border: none;
-  color: ${(props) => props.theme.white};
+  color: var(--iconButtonColor);
   cursor: pointer;
   position: relative;
-
-  background-color: ${(props) => (props.isSelected ? props.theme.blue : props.theme.toolbar)};
+  background-color: ${(props) => (props.isSelected ? 'var(--iconButtonHoverColor)' : 'var(--toolbar)')};
 
   &:hover {
-    background-color: ${(props) => (props.isSelected ? props.theme.blueHover : props.theme.panel)};
+    background-color: ${(props) => (props.isSelected ? 'var(--iconButtonHoverColor)' : 'var(--iconButtonHoverColor)')};
   }
 `
 

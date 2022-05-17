@@ -2,8 +2,6 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
-import { ThemeContext } from '@xrengine/client-core/src/util/theme'
-
 /**
  * StyledError styled component used to provide styles for error container.
  *
@@ -17,7 +15,7 @@ const StyledError = (styled as any).div`
   align-items: center;
   height: 100vh;
   width: 100vw;
-  color: ${(props) => props.theme.red};
+  color: var(--red);
 
   svg {
     margin-bottom: 20px;
@@ -42,7 +40,5 @@ export const Error = (props: any) => {
     </StyledError>
   )
 }
-
-Error.contextType = ThemeContext
 
 export default Error

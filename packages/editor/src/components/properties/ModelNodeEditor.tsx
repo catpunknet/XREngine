@@ -6,8 +6,9 @@ import { AssetLoader } from '@xrengine/engine/src/assets/classes/AssetLoader'
 import { AnimationManager } from '@xrengine/engine/src/avatar/AnimationManager'
 import { AnimationComponent } from '@xrengine/engine/src/avatar/components/AnimationComponent'
 import { LoopAnimationComponent } from '@xrengine/engine/src/avatar/components/LoopAnimationComponent'
-import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineService'
+import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
 import { getComponent, hasComponent, removeComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
+import { traverseEntityNode } from '@xrengine/engine/src/ecs/functions/EntityTreeFunctions'
 import { useWorld } from '@xrengine/engine/src/ecs/functions/SystemHooks'
 import { InteractableComponent } from '@xrengine/engine/src/interaction/components/InteractableComponent'
 import { EntityNodeComponent } from '@xrengine/engine/src/scene/components/EntityNodeComponent'
@@ -29,6 +30,7 @@ import InputGroup from '../inputs/InputGroup'
 import InteractableGroup from '../inputs/InteractableGroup'
 import ModelInput from '../inputs/ModelInput'
 import SelectInput from '../inputs/SelectInput'
+import EnvMapEditor from './EnvMapEditor'
 import NodeEditor from './NodeEditor'
 import ShadowProperties from './ShadowProperties'
 import { EditorComponentType, updateProperty } from './Util'
@@ -96,7 +98,7 @@ export const ModelNodeEditor: EditorComponentType = (props) => {
   }
 
   const textureOverrideEntities = [] as { label: string; value: string }[]
-  useWorld().entityTree.traverse((node) => {
+  traverseEntityNode(useWorld().entityTree.rootNode, (node) => {
     if (node.entity === entity) return
 
     textureOverrideEntities.push({
@@ -115,18 +117,13 @@ export const ModelNodeEditor: EditorComponentType = (props) => {
     <NodeEditor description={t('editor:properties.model.description')} {...props}>
       <InputGroup name="Model Url" label={t('editor:properties.model.lbl-modelurl')}>
         <ModelInput value={modelComponent.src} onChange={updateSrc} />
-        {hasError && errorComponent.srcError && (
-          <div style={{ marginTop: 2, color: '#FF8C00' }}>{t('editor:properties.model.error-url')}</div>
-        )}
-      </InputGroup>
-      <InputGroup name="Environment Map" label={t('editor:properties.model.lbl-envmapUrl')}>
-        <ModelInput value={modelComponent.envMapOverride} onChange={updateProperty(ModelComponent, 'envMapOverride')} />
-        {hasError && errorComponent.envMapError && (
+        {hasError && errorComponent?.srcError && (
           <div style={{ marginTop: 2, color: '#FF8C00' }}>{t('editor:properties.model.error-url')}</div>
         )}
       </InputGroup>
       <InputGroup name="Texture Override" label={t('editor:properties.model.lbl-textureOverride')}>
         <SelectInput
+          key={props.node.entity}
           options={textureOverrideEntities}
           value={modelComponent.textureOverride}
           onChange={updateProperty(ModelComponent, 'textureOverride')}
@@ -153,6 +150,7 @@ export const ModelNodeEditor: EditorComponentType = (props) => {
 
       <InputGroup name="Loop Animation" label={t('editor:properties.model.lbl-loopAnimation')}>
         <SelectInput
+          key={props.node.entity}
           options={animationOptions}
           value={loopAnimationComponent?.activeClipIndex}
           onChange={updateProperty(LoopAnimationComponent, 'activeClipIndex')}
@@ -171,6 +169,7 @@ export const ModelNodeEditor: EditorComponentType = (props) => {
         <BooleanInput value={isInteractable} onChange={onChangeInteractable} />
       </InputGroup>
       {isInteractable && <InteractableGroup node={props.node}></InteractableGroup>}
+      <EnvMapEditor node={props.node} />
       <ShadowProperties node={props.node} />
     </NodeEditor>
   )

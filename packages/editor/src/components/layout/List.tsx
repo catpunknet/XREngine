@@ -13,23 +13,24 @@ export const ListItem = (styled as any).li`
   min-height: 24px;
   padding: 0 4px;
   align-items: center;
-  color: ${(props) => props.theme.text};
-
-  background-color: ${(props) => (props.selected ? props.theme.selected : props.theme.panel2)};
+  color: var(--textColor);
+  background-color: ${(props) =>
+    props.selected ? 'var(--dropdownMenuHoverBackground)' : 'var(--dropdownMenuBackground)'};
 
   :nth-child(odd) {
-    background-color: ${(props) => (props.selected ? props.theme.selected : props.theme.panel)};
+    background-color: ${(props) =>
+      props.selected ? 'var(--dropdownMenuHoverBackground)' : 'var(--dropdownMenuBackground)'};
   }
 
   :hover,
   :focus {
-    background-color: ${(props) => (props.selected ? props.theme.blueHover : props.theme.hover)};
-    color: ${(props) => props.theme.text};
+    background-color: ${(props) => (props.selected ? 'var(--blueHover)' : 'var(--dropdownMenuHoverBackground)')};
+    color: var(--textColor);
   }
 
   :active {
-    background-color: ${(props) => props.theme.bluePressed};
-    color: ${(props) => props.theme.text};
+    background-color: var(--bluePressed);
+    color: var(--textColor);
   }
 `
 

@@ -14,8 +14,9 @@ export function setObjectLayers(object: Object3D, ...layers: number[]) {
   for (const layerKey of Object.keys(ObjectLayers)) {
     const layer = ObjectLayers[layerKey]
     const hasLayer = object.layers.isEnabled(layer)
-    Engine.objectLayerList[layer] = Engine.objectLayerList[layer] || new Set()
-    if (hasLayer) Engine.objectLayerList[layer].add(object)
-    else Engine.objectLayerList[layer].delete(object)
+    Engine.instance.currentWorld.objectLayerList[layer] =
+      Engine.instance.currentWorld.objectLayerList[layer] || new Set()
+    if (hasLayer) Engine.instance.currentWorld.objectLayerList[layer].add(object)
+    else Engine.instance.currentWorld.objectLayerList[layer].delete(object)
   }
 }

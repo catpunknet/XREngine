@@ -1,7 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineService'
+import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
 import { getComponent, hasComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { CloudComponent } from '@xrengine/engine/src/scene/components/CloudComponent'
 import { ErrorComponent } from '@xrengine/engine/src/scene/components/ErrorComponent'
@@ -91,7 +91,11 @@ export const CloudsNodeEditor: EditorComponentType = (props) => {
       </InputGroup>
 
       <InputGroup name="Fog Range" label={t('editor:properties.clouds.lbl-fogRange')}>
-        <Vector2Input value={cloudComponent.fogRange} onChange={updateProperty(CloudComponent, 'fogRange')} />
+        <Vector2Input
+          value={cloudComponent.fogRange}
+          onChange={updateProperty(CloudComponent, 'fogRange')}
+          hideLabels
+        />
       </InputGroup>
     </NodeEditor>
   )

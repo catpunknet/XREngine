@@ -18,37 +18,43 @@ import {
   pauseProducer,
   resumeProducer
 } from '@xrengine/client-core/src/transports/SocketWebRTCClientFunctions'
-import { getMediaTransport } from '@xrengine/client-core/src/transports/SocketWebRTCClientTransport'
 import { useAuthState } from '@xrengine/client-core/src/user/services/AuthService'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
-import { EngineActions, useEngineState } from '@xrengine/engine/src/ecs/classes/EngineService'
+import { EngineActions, useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
 import {
   startFaceTracking,
   startLipsyncTracking,
   stopFaceTracking,
   stopLipsyncTracking
 } from '@xrengine/engine/src/input/functions/WebcamInput'
-import { dispatchLocal } from '@xrengine/engine/src/networking/functions/dispatchFrom'
+import { Network } from '@xrengine/engine/src/networking/classes/Network'
 import { MediaStreams } from '@xrengine/engine/src/networking/systems/MediaStreamSystem'
+import { dispatchAction } from '@xrengine/hyperflux'
 
 import { Mic, MicOff, Videocam, VideocamOff } from '@mui/icons-material'
 import FaceIcon from '@mui/icons-material/Face'
 
-import styles from './MediaIconsBox.module.scss'
+import { SocketWebRTCClientTransport } from '../../transports/SocketWebRTCClientTransport'
+import styles from './index.module.scss'
 
-const MediaIconsBox = (props) => {
+interface Props {
+  animate?: any
+}
+const MediaIconsBox = (props: Props) => {
   const [hasAudioDevice, setHasAudioDevice] = useState(false)
   const [hasVideoDevice, setHasVideoDevice] = useState(false)
 
   const user = useAuthState().user
   const chatState = useChatState()
-  const instanceId = useLocationInstanceConnectionState().instance.id.value
+  const instanceId = useLocationInstanceConnectionState().currentInstanceId.value
   const channelState = chatState.channels
   const channels = channelState.channels.value
   const channelEntries = Object.values(channels).filter((channel) => !!channel) as any
   const instanceChannel = channelEntries.find((entry) => entry.instanceId === instanceId)
   const currentLocation = useLocationState().currentLocation.location
   const channelConnectionState = useMediaInstanceConnectionState()
+  const currentChannelInstanceId = channelConnectionState.currentInstanceId.value
+  const currentChannelInstanceConnection = channelConnectionState.instances[currentChannelInstanceId!].ornull
   const mediastream = useMediaStreamState()
   const videoEnabled = currentLocation?.locationSetting?.value
     ? currentLocation?.locationSetting?.videoEnabled?.value
@@ -81,19 +87,23 @@ const MediaIconsBox = (props) => {
         ? 'instance'
         : user.partyId?.value || 'instance'
     if (isFaceTrackingEnabled.value) {
+      MediaStreams.instance.setFaceTracking(false)
       stopFaceTracking()
       stopLipsyncTracking()
+      MediaStreamService.updateFaceTrackingState()
     } else {
-      const mediaTransport = getMediaTransport()
+      const mediaTransport = Network.instance.getTransport('media') as SocketWebRTCClientTransport
       if (await configureMediaTransports(mediaTransport, ['video', 'audio'])) {
+        MediaStreams.instance.setFaceTracking(true)
         startFaceTracking()
         startLipsyncTracking()
+        MediaStreamService.updateFaceTrackingState()
       }
     }
   }
 
   const checkEndVideoChat = async () => {
-    const mediaTransport = getMediaTransport()
+    const mediaTransport = Network.instance.getTransport('media') as SocketWebRTCClientTransport
     if (
       (MediaStreams.instance.audioPaused || MediaStreams.instance?.camAudioProducer == null) &&
       (MediaStreams.instance.videoPaused || MediaStreams.instance?.camVideoProducer == null) &&
@@ -107,7 +117,7 @@ const MediaIconsBox = (props) => {
     }
   }
   const handleMicClick = async () => {
-    const mediaTransport = getMediaTransport()
+    const mediaTransport = Network.instance.getTransport('media') as SocketWebRTCClientTransport
     if (await configureMediaTransports(mediaTransport, ['audio'])) {
       if (MediaStreams.instance?.camAudioProducer == null) await createCamAudioProducer(mediaTransport)
       else {
@@ -121,7 +131,7 @@ const MediaIconsBox = (props) => {
   }
 
   const handleCamClick = async () => {
-    const mediaTransport = getMediaTransport()
+    const mediaTransport = Network.instance.getTransport('media') as SocketWebRTCClientTransport
     if (await configureMediaTransports(mediaTransport, ['video'])) {
       if (MediaStreams.instance?.camVideoProducer == null) await createCamVideoProducer(mediaTransport)
       else {
@@ -135,14 +145,17 @@ const MediaIconsBox = (props) => {
     }
   }
 
-  const handleVRClick = () => dispatchLocal(EngineActions.xrStart() as any)
+  const handleVRClick = () => dispatchAction(Engine.instance.store, EngineActions.xrStart())
 
   const VideocamIcon = isCamVideoEnabled.value ? Videocam : VideocamOff
   const MicIcon = isCamAudioEnabled.value ? Mic : MicOff
 
   return (
-    <section className={styles.drawerBox}>
-      {instanceMediaChatEnabled && hasAudioDevice && channelConnectionState.connected.value === true ? (
+    <section className={`${styles.drawerBox} ${props.animate}`}>
+      {instanceMediaChatEnabled &&
+      hasAudioDevice &&
+      currentChannelInstanceId &&
+      currentChannelInstanceConnection.connected.value ? (
         <button
           type="button"
           id="UserAudio"
@@ -152,7 +165,10 @@ const MediaIconsBox = (props) => {
           <MicIcon />
         </button>
       ) : null}
-      {videoEnabled && hasVideoDevice && channelConnectionState.connected.value === true ? (
+      {videoEnabled &&
+      hasVideoDevice &&
+      currentChannelInstanceId &&
+      currentChannelInstanceConnection.connected.value ? (
         <>
           <button
             type="button"

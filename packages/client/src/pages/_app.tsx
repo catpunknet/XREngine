@@ -10,6 +10,7 @@ import { initGA, logPageView } from '@xrengine/client-core/src/common/components
 import { ProjectService, useProjectState } from '@xrengine/client-core/src/common/services/ProjectService'
 import { useDispatch } from '@xrengine/client-core/src/store'
 import { theme } from '@xrengine/client-core/src/theme'
+import { useAuthState } from '@xrengine/client-core/src/user/services/AuthService'
 import GlobalStyle from '@xrengine/client-core/src/util/GlobalStyle'
 import { StoredLocalAction } from '@xrengine/client-core/src/util/StoredLocalState'
 import { loadWebappInjection } from '@xrengine/projects/loadWebappInjection'
@@ -17,6 +18,7 @@ import { loadWebappInjection } from '@xrengine/projects/loadWebappInjection'
 import { StyledEngineProvider, Theme, ThemeProvider } from '@mui/material/styles'
 
 import RouterComp from '../route/public'
+
 import './styles.scss'
 
 declare module '@mui/styles/defaultTheme' {
@@ -30,12 +32,14 @@ declare module '@mui/styles/defaultTheme' {
 }
 
 const App = (): any => {
+  const selfUser = useAuthState().user
   const clientSettingState = useClientSettingState()
   const [clientSetting] = clientSettingState?.client?.value || []
   const [ctitle, setTitle] = useState<string>(clientSetting?.title || '')
   const [favicon16, setFavicon16] = useState(clientSetting?.favicon16px)
   const [favicon32, setFavicon32] = useState(clientSetting?.favicon32px)
   const [description, setDescription] = useState(clientSetting?.siteDescription)
+  const [clientThemeSettings, setClientThemeSettings] = useState(clientSetting?.themeSettings)
   const dispatch = useDispatch()
   const [projectComponents, setProjectComponents] = useState<Array<any>>(null!)
   const [fetchedProjectComponents, setFetchedProjectComponents] = useState(false)
@@ -54,6 +58,32 @@ const App = (): any => {
 
     logPageView()
   }, [])
+
+  useEffect(() => {
+    const html = document.querySelector('html')
+    if (html) {
+      const currentTheme = selfUser?.user_setting?.value?.themeMode || 'dark'
+      html.dataset.theme = currentTheme
+
+      if (clientThemeSettings) {
+        if (currentTheme === 'light' && clientThemeSettings?.light) {
+          for (let variable of Object.keys(clientThemeSettings.light)) {
+            ;(document.querySelector(`[data-theme=light]`) as any)?.style.setProperty(
+              '--' + variable,
+              clientThemeSettings.light[variable]
+            )
+          }
+        } else if (currentTheme === 'dark' && clientThemeSettings?.dark) {
+          for (let variable of Object.keys(clientThemeSettings.dark)) {
+            ;(document.querySelector(`[data-theme=dark]`) as any)?.style.setProperty(
+              '--' + variable,
+              clientThemeSettings.dark[variable]
+            )
+          }
+        }
+      }
+    }
+  }, [selfUser?.user_setting?.value])
 
   useEffect(initApp, [])
 
@@ -80,8 +110,32 @@ const App = (): any => {
       setFavicon16(clientSetting?.favicon16px)
       setFavicon32(clientSetting?.favicon32px)
       setDescription(clientSetting?.siteDescription)
+      setClientThemeSettings(clientSetting?.themeSettings)
     }
+    ClientSettingService.fetchClientSettings()
   }, [clientSettingState?.updateNeeded?.value])
+
+  useEffect(() => {
+    const currentTheme = selfUser?.user_setting?.value?.themeMode || 'dark'
+
+    if (clientThemeSettings) {
+      if (currentTheme === 'light' && clientThemeSettings?.light) {
+        for (let variable of Object.keys(clientThemeSettings.light)) {
+          ;(document.querySelector(`[data-theme=light]`) as any)?.style.setProperty(
+            '--' + variable,
+            clientThemeSettings.light[variable]
+          )
+        }
+      } else if (currentTheme === 'dark' && clientThemeSettings?.dark) {
+        for (let variable of Object.keys(clientThemeSettings.dark)) {
+          ;(document.querySelector(`[data-theme=dark]`) as any)?.style.setProperty(
+            '--' + variable,
+            clientThemeSettings.dark[variable]
+          )
+        }
+      }
+    }
+  }, [clientThemeSettings])
 
   return (
     <>

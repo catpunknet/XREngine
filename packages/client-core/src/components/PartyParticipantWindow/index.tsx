@@ -3,7 +3,6 @@ import classNames from 'classnames'
 import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useAppState } from '@xrengine/client-core/src/common/services/AppService'
 import { MediaStreamService, useMediaStreamState } from '@xrengine/client-core/src/media/services/MediaStreamService'
 import { useLocationState } from '@xrengine/client-core/src/social/services/LocationService'
 import {
@@ -14,13 +13,14 @@ import {
   resumeConsumer,
   resumeProducer
 } from '@xrengine/client-core/src/transports/SocketWebRTCClientFunctions'
-import { getMediaTransport } from '@xrengine/client-core/src/transports/SocketWebRTCClientTransport'
 import { getAvatarURLForUser } from '@xrengine/client-core/src/user/components/UserMenu/util'
 import { useAuthState } from '@xrengine/client-core/src/user/services/AuthService'
 import { useUserState } from '@xrengine/client-core/src/user/services/UserService'
-import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineService'
+import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
+import { Network } from '@xrengine/engine/src/networking/classes/Network'
 import { MessageTypes } from '@xrengine/engine/src/networking/enums/MessageTypes'
 import { MediaStreams } from '@xrengine/engine/src/networking/systems/MediaStreamSystem'
+import { SCENE_COMPONENT_AUDIO_SETTINGS_DEFAULT_VALUES } from '@xrengine/engine/src/scene/functions/loaders/AudioSettingFunctions'
 
 import {
   Launch,
@@ -39,8 +39,9 @@ import IconButton from '@mui/material/IconButton'
 import Slider from '@mui/material/Slider'
 import Tooltip from '@mui/material/Tooltip'
 
+import { SocketWebRTCClientTransport } from '../../transports/SocketWebRTCClientTransport'
 import Draggable from './Draggable'
-import styles from './PartyParticipantWindow.module.scss'
+import styles from './index.module.scss'
 
 interface ContainerProportions {
   width: number | string
@@ -53,6 +54,7 @@ interface Props {
 }
 
 const PartyParticipantWindow = (props: Props): JSX.Element => {
+  const [isPiP, setPiP] = useState(false)
   const [videoStream, _setVideoStream] = useState<any>(null)
   const [audioStream, _setAudioStream] = useState<any>(null)
   const [videoStreamPaused, setVideoStreamPaused] = useState(false)
@@ -169,14 +171,15 @@ const PartyParticipantWindow = (props: Props): JSX.Element => {
 
   useEffect(() => {
     // TODO: uncomment these two lines to silence main audio in favor of spatial audio
-    // if (selfUser?.user_setting?.spatialAudioEnabled === true && audioRef.current != null) audioRef.current.volume = 0
-    // else audioRef.current!.volume = volume / 100
+    if (SCENE_COMPONENT_AUDIO_SETTINGS_DEFAULT_VALUES.usePositionalAudio && audioRef.current != null)
+      audioRef.current.volume = 0
+    else audioRef.current!.volume = volume / 100
     // (selfUser?.user_setting?.spatialAudioEnabled === false || selfUser?.user_setting?.spatialAudioEnabled === 0) &&
-    // Engine.spatialAudio
+    // Engine.instance.spatialAudio
   }, [selfUser])
 
   useEffect(() => {
-    const mediaTransport = getMediaTransport()
+    const mediaTransport = Network.instance.getTransport('media') as SocketWebRTCClientTransport
     const socket = mediaTransport.socket
     if (typeof socket?.on === 'function') socket?.on(MessageTypes.WebRTCPauseConsumer.toString(), pauseConsumerListener)
     if (typeof socket?.on === 'function')
@@ -219,7 +222,7 @@ const PartyParticipantWindow = (props: Props): JSX.Element => {
       // PositionalAudioSystem.instance?.suspend()
       // }
       // selfUser?.user_setting?.spatialAudioEnabled === false ||
-      // (selfUser?.user_setting?.spatialAudioEnabled === 0 && Engine.spatialAudio)
+      // (selfUser?.user_setting?.spatialAudioEnabled === 0 && Engine.instance.spatialAudio)
       setVolume(volume)
     }
 
@@ -342,7 +345,7 @@ const PartyParticipantWindow = (props: Props): JSX.Element => {
 
   const toggleVideo = async (e) => {
     e.stopPropagation()
-    const mediaTransport = getMediaTransport()
+    const mediaTransport = Network.instance.getTransport('media') as SocketWebRTCClientTransport
     if (peerId === 'me_cam') {
       const videoPaused = MediaStreams.instance.toggleVideoPaused()
       if (videoPaused) await pauseProducer(mediaTransport, MediaStreams.instance?.camVideoProducer)
@@ -354,15 +357,19 @@ const PartyParticipantWindow = (props: Props): JSX.Element => {
       else await resumeProducer(mediaTransport, MediaStreams.instance.screenVideoProducer)
       setVideoStreamPaused(videoPaused)
     } else {
-      if (videoStream.paused === false) await pauseConsumer(mediaTransport, videoStream)
-      else await resumeConsumer(mediaTransport, videoStream)
-      setVideoStreamPaused(videoStream.paused)
+      if (videoStream.paused === false) {
+        await pauseConsumer(mediaTransport, videoStream)
+        setVideoStreamPaused(true)
+      } else {
+        await resumeConsumer(mediaTransport, videoStream)
+        setVideoStreamPaused(false)
+      }
     }
   }
 
   const toggleAudio = async (e) => {
     e.stopPropagation()
-    const mediaTransport = getMediaTransport()
+    const mediaTransport = Network.instance.getTransport('media') as SocketWebRTCClientTransport
     if (peerId === 'me_cam') {
       const audioPaused = MediaStreams.instance.toggleAudioPaused()
       if (audioPaused) await pauseProducer(mediaTransport, MediaStreams.instance?.camAudioProducer)
@@ -374,15 +381,19 @@ const PartyParticipantWindow = (props: Props): JSX.Element => {
       else await resumeProducer(mediaTransport, MediaStreams.instance.screenAudioProducer)
       setAudioStreamPaused(audioPaused)
     } else {
-      if (audioStream.paused === false) await pauseConsumer(mediaTransport, audioStream)
-      else await resumeConsumer(mediaTransport, audioStream)
-      setAudioStreamPaused(audioStream.paused)
+      if (audioStream.paused === false) {
+        await pauseConsumer(mediaTransport, audioStream)
+        setAudioStreamPaused(true)
+      } else {
+        await resumeConsumer(mediaTransport, audioStream)
+        setAudioStreamPaused(false)
+      }
     }
   }
 
   const toggleGlobalMute = async (e) => {
     e.stopPropagation()
-    const mediaTransport = getMediaTransport()
+    const mediaTransport = Network.instance.getTransport('media') as SocketWebRTCClientTransport
     if (!audioProducerGlobalMute) {
       await globalMuteProducer(mediaTransport, { id: audioStream.producerId })
       setAudioProducerGlobalMute(true)
@@ -403,8 +414,6 @@ const PartyParticipantWindow = (props: Props): JSX.Element => {
     }
     setVolume(newValue)
   }
-
-  const [isPiP, setPiP] = useState(false)
 
   const togglePiP = () => setPiP(!isPiP)
 
@@ -486,15 +495,21 @@ const PartyParticipantWindow = (props: Props): JSX.Element => {
                   </IconButton>
                 </Tooltip>
               ) : null}
-              {
-                <Tooltip title={t('user:person.openPictureInPicture') as string}>
-                  <IconButton color="secondary" size="small" className={styles['audio-control']} onClick={togglePiP}>
-                    <Launch className={styles.pipBtn} />
-                  </IconButton>
-                </Tooltip>
-              }
+              <Tooltip title={t('user:person.openPictureInPicture') as string}>
+                <IconButton
+                  color="secondary"
+                  size="small"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    togglePiP()
+                  }}
+                >
+                  <Launch className={styles.pipBtn} />
+                </IconButton>
+              </Tooltip>
             </div>
-            {audioProducerGlobalMute === true && <div className={styles['global-mute']}>Muted by Admin</div>}
+            {audioProducerGlobalMute && <div className={styles['global-mute']}>Muted by Admin</div>}
             {audioStream &&
               !audioProducerPaused &&
               !audioProducerGlobalMute &&

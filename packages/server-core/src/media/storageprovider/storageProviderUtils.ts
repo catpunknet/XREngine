@@ -1,11 +1,11 @@
-import { useStorageProvider } from './storageprovider'
-
-const storageProvider = useStorageProvider()
+import logger from '../../logger'
+import { getStorageProvider } from './storageprovider'
 
 export const getFileKeysRecursive = async (path: string) => {
+  const storageProvider = getStorageProvider()
   const files: string[] = []
   try {
-    const response = await storageProvider.listObjects(path, [], true, null!)
+    const response = await storageProvider.listObjects(path, true)
     const entries = response.Contents
     if (entries.length) {
       for (const { Key } of entries) {
@@ -13,7 +13,7 @@ export const getFileKeysRecursive = async (path: string) => {
       }
     }
   } catch (e) {
-    console.log(e)
+    logger.error(e)
   }
   return files
 }

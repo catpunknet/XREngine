@@ -1,7 +1,8 @@
 import assert from 'assert'
 
-import { createApp } from '../../../../server/src/app'
 import { Application } from '../../../declarations'
+import { createFeathersExpressApp } from '../../createApp'
+import { copyDefaultProject, uploadLocalProjectToProvider } from '../../projects/project/project.class'
 import { getAvatarFromStaticResources } from './avatar-helper'
 
 // import { generateAvatarThumbnail } from './generateAvatarThumbnail'
@@ -15,8 +16,13 @@ import { getAvatarFromStaticResources } from './avatar-helper'
 describe('avatar-helper', () => {
   let app: Application
   before(async () => {
-    app = createApp()
+    app = createFeathersExpressApp()
     await app.setup()
+
+    // reset default project in case another test has tampered with it
+    copyDefaultProject()
+    await app.service('project')._seedProject('default-project')
+    await uploadLocalProjectToProvider('default-project')
   })
 
   // describe('generateAvatarThumbnail', () => {

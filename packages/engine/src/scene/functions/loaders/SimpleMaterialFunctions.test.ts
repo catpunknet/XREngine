@@ -1,14 +1,24 @@
 import assert from 'assert'
-import { BoxGeometry, Mesh, MeshLambertMaterial, MeshPhongMaterial, MeshStandardMaterial, Object3D } from 'three'
+import {
+  BoxGeometry,
+  Material,
+  Mesh,
+  MeshLambertMaterial,
+  MeshPhongMaterial,
+  MeshStandardMaterial,
+  Object3D,
+  ShaderMaterial
+} from 'three'
 
 import { ComponentJson } from '@xrengine/common/src/interfaces/SceneInterface'
 
 import { Engine } from '../../../ecs/classes/Engine'
 import { Entity } from '../../../ecs/classes/Entity'
-import { createWorld, World } from '../../../ecs/classes/World'
 import { getComponent } from '../../../ecs/functions/ComponentFunctions'
 import { addComponent } from '../../../ecs/functions/ComponentFunctions'
 import { createEntity } from '../../../ecs/functions/EntityFunctions'
+import { createEngine } from '../../../initializeEngine'
+import { EngineRenderer } from '../../../renderer/WebGLRendererSystem'
 import { EntityNodeComponent } from '../../components/EntityNodeComponent'
 import { SimpleMaterialTagComponent } from '../../components/SimpleMaterialTagComponent'
 import { SceneOptions } from '../../systems/SceneObjectSystem'
@@ -24,12 +34,10 @@ SceneOptions.instance = new SceneOptions()
 SceneOptions.instance.boxProjection = true
 
 describe('SimpleMaterialFunctions', () => {
-  let world: World
   let entity: Entity
 
   beforeEach(() => {
-    world = createWorld()
-    Engine.currentWorld = world
+    createEngine()
     entity = createEntity()
   })
 
@@ -58,28 +66,13 @@ describe('SimpleMaterialFunctions', () => {
       assert(Object.keys(simplematerialComponent).length === 0)
     })
 
-    describe('Editor vs Location', () => {
-      it('creates SimpleMaterial in Location', () => {
-        addComponent(entity, EntityNodeComponent, { components: [] })
+    it('will include this component into EntityNodeComponent', () => {
+      addComponent(entity, EntityNodeComponent, { components: [] })
 
-        deserializeSimpleMaterial(entity, sceneComponent)
+      deserializeSimpleMaterial(entity, sceneComponent)
 
-        const entityNodeComponent = getComponent(entity, EntityNodeComponent)
-        assert(!entityNodeComponent.components.includes(SCENE_COMPONENT_SIMPLE_MATERIALS))
-      })
-
-      it('creates SimpleMaterial in Editor', () => {
-        Engine.isEditor = true
-
-        addComponent(entity, EntityNodeComponent, { components: [] })
-
-        deserializeSimpleMaterial(entity, sceneComponent)
-
-        const entityNodeComponent = getComponent(entity, EntityNodeComponent)
-        assert(entityNodeComponent.components.includes(SCENE_COMPONENT_SIMPLE_MATERIALS))
-
-        Engine.isEditor = false
-      })
+      const entityNodeComponent = getComponent(entity, EntityNodeComponent)
+      assert(entityNodeComponent.components.includes(SCENE_COMPONENT_SIMPLE_MATERIALS))
     })
   })
 
@@ -95,21 +88,13 @@ describe('SimpleMaterialFunctions', () => {
   })
 
   describe('useSimpleMaterial()', () => {
-    it('replaces MeshStandardMaterial to MeshPhongMaterial', () => {
+    it('replaces materials with ShaderMaterial', () => {
       const mat = new MeshStandardMaterial()
       const obj3d = new Mesh(new BoxGeometry(), mat)
-      useSimpleMaterial(obj3d)
+      useSimpleMaterial(obj3d as any)
 
-      assert(obj3d.material instanceof MeshPhongMaterial)
-      assert((obj3d as any).prevMaterial === mat)
-    })
-
-    it('does not replace material other than MeshStandardMaterial', () => {
-      const mat = new MeshLambertMaterial()
-      const obj3d = new Mesh(new BoxGeometry(), mat)
-      useSimpleMaterial(obj3d)
-
-      assert(obj3d.material instanceof MeshLambertMaterial)
+      assert(obj3d.material instanceof ShaderMaterial)
+      assert(obj3d.userData.prevMaterial === mat)
     })
   })
 
@@ -117,23 +102,23 @@ describe('SimpleMaterialFunctions', () => {
     it('does nothing if there no material', () => {
       const mat = new MeshStandardMaterial()
       const obj3d = new Object3D()
-      useStandardMaterial(obj3d as Mesh)
+      useStandardMaterial(obj3d as Mesh<any, Material>)
 
-      assert(!(obj3d as any).material)
+      assert(!obj3d.userData.material)
     })
 
     it('restores previous material', () => {
       const mat = new MeshStandardMaterial()
       const obj3d = new Mesh(new BoxGeometry(), new MeshPhongMaterial())
       obj3d.receiveShadow = true
-      Engine.csm = { setupMaterial() {} } as any
-      ;(obj3d as any).prevMaterial = mat
+      EngineRenderer.instance.csm = { setupMaterial() {} } as any
+      obj3d.userData.prevMaterial = mat
 
       useStandardMaterial(obj3d)
 
       assert(obj3d.material === (mat as any))
       assert((obj3d.material as any).envMapIntensity === SceneOptions.instance.envMapIntensity)
-      assert(typeof (obj3d as any).prevMaterial === 'undefined')
+      assert(typeof obj3d.userData.prevMaterial === 'undefined')
     })
   })
 })

@@ -2,7 +2,7 @@ import { Hook, HookContext } from '@feathersjs/feathers'
 import _ from 'lodash'
 
 import config from '../appconfig'
-import { useStorageProvider } from '../media/storageprovider/storageprovider'
+import { getStorageProvider } from '../media/storageprovider/storageprovider'
 import uploadThumbnailLinkHook from './upload-thumbnail-link'
 
 export default (): Hook => {
@@ -26,7 +26,7 @@ export default (): Hook => {
         })
 
         await Promise.all(
-          existingThumbnails.data.map(async (item: any) => {
+          existingThumbnails.data.map(async (item) => {
             return app.service('static-resource').remove(item.id)
           })
         )
@@ -34,10 +34,10 @@ export default (): Hook => {
         const bucketName = config.aws.s3.staticResourceBucket
         params.uploadPath = data.url.replace('https://s3.amazonaws.com/' + bucketName + '/', '')
         params.uploadPath = params.uploadPath.replace('/manifest.mpd', '')
-        params.storageProvider = useStorageProvider()
+        params.storageProvider = getStorageProvider()
         const contextClone = _.cloneDeep(context)
         const result = await (uploadThumbnailLinkHook() as any)(contextClone)
-        data.metadata.thumbnailUrl = (result as any).params.thumbnailUrl.replace(
+        data.metadata.thumbnailUrl = result.params.thumbnailUrl.replace(
           's3.amazonaws.com/' + bucketName,
           config.aws.cloudfront.domain
         )

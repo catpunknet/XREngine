@@ -2,8 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Color } from 'three'
 
-import { getDirectoryFromUrl } from '@xrengine/common/src/utils/getDirectoryFromUrl'
-import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineService'
+import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
 import { getComponent, hasComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { ErrorComponent } from '@xrengine/engine/src/scene/components/ErrorComponent'
 import {
@@ -15,7 +14,7 @@ import { SkyTypeEnum } from '@xrengine/engine/src/scene/constants/SkyTypeEnum'
 
 import CloudIcon from '@mui/icons-material/Cloud'
 
-import { CommandManager } from '../../managers/CommandManager'
+import { setPropertyOnSelectionEntities } from '../../classes/History'
 import ColorInput from '../inputs/ColorInput'
 import CompoundNumericInput from '../inputs/CompoundNumericInput'
 import FolderInput from '../inputs/FolderInput'
@@ -69,7 +68,7 @@ export const SkyboxNodeEditor: EditorComponentType = (props) => {
 
   const onChangeEquirectangularPathOption = (equirectangularPath) => {
     if (equirectangularPath !== skyComponent.equirectangularPath) {
-      CommandManager.instance.setPropertyOnSelectionEntities({
+      setPropertyOnSelectionEntities({
         component: SkyboxComponent,
         properties: { equirectangularPath }
       })
@@ -77,10 +76,9 @@ export const SkyboxNodeEditor: EditorComponentType = (props) => {
   }
 
   const onChangeCubemapPathOption = (path) => {
-    const directory = getDirectoryFromUrl(path)
-
+    const directory = path[path.length - 1] === '/' ? path.substring(0, path.length - 1) : path
     if (directory !== skyComponent.cubemapPath) {
-      CommandManager.instance.setPropertyOnSelectionEntities({
+      setPropertyOnSelectionEntities({
         component: SkyboxComponent,
         properties: { cubemapPath: directory }
       })
@@ -207,6 +205,7 @@ export const SkyboxNodeEditor: EditorComponentType = (props) => {
     >
       <InputGroup name="Sky Type" label={t('editor:properties.skybox.lbl-skyType')}>
         <SelectInput
+          key={props.node.entity}
           options={SkyOption}
           value={skyComponent.backgroundType}
           onChange={updateProperty(SkyboxComponent, 'backgroundType')}

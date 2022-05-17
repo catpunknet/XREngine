@@ -4,38 +4,39 @@ import dotenv from 'dotenv-flow'
 import path from 'path'
 import url from 'url'
 
-import '@xrengine/engine/src/patchEngineNode'
+import multiLogger from './logger'
+
+const { register } = require('trace-unhandled')
+register()
+
+const logger = multiLogger.child({ component: 'server-core:config' })
 
 const kubernetesEnabled = process.env.KUBERNETES === 'true'
 const testEnabled = process.env.TEST === 'true'
 
 // ensure process fails properly
 process.on('exit', async (code) => {
-  console.log('Server EXIT:', code)
+  if (code !== 0) logger.fatal(`Server EXIT(${code}).`)
 })
 
 process.on('SIGTERM', async (err) => {
-  console.log('Server SIGTERM')
-  console.log(err)
+  logger.fatal(err, 'Server SIGTERM.')
   process.exit(1)
 })
 process.on('SIGINT', () => {
-  console.log('RECEIVED SIGINT')
+  logger.fatal('RECEIVED SIGINT.')
   process.exit(1)
 })
 
-//emitted when an uncaught JavaScript exception bubbles
+// emitted when an uncaught JavaScript exception bubbles
 process.on('uncaughtException', (err) => {
-  console.log('UNCAUGHT EXCEPTION')
-  console.log(err)
+  logger.fatal(err, 'UNCAUGHT EXCEPTION.')
   process.exit(1)
 })
 
 //emitted whenever a Promise is rejected and no error handler is attached to it
 process.on('unhandledRejection', (reason, p) => {
-  console.log('UNHANDLED REJECTION')
-  console.log(reason)
-  console.log(p)
+  logger.fatal({ reason, promise: p }, 'UNHANDLED PROMISE REJECTION.')
   process.exit(1)
 })
 
@@ -131,7 +132,7 @@ const client = {
   title: process.env.APP_TITLE!,
   url:
     process.env.APP_URL ||
-    (process.env.LOCAL_BUILD
+    (process.env.VITE_LOCAL_BUILD
       ? 'http://' + process.env.APP_HOST + ':' + process.env.APP_PORT
       : 'https://' + process.env.APP_HOST + ':' + process.env.APP_PORT),
   releaseName: process.env.RELEASE_NAME!
@@ -149,7 +150,6 @@ const gameserver = {
   domain: process.env.GAMESERVER_DOMAIN || 'gameserver.theoverlay.io',
   releaseName: process.env.RELEASE_NAME!,
   port: process.env.GAMESERVER_PORT!,
-  mode: process.env.GAMESERVER_MODE!,
   locationName: process.env.PRELOAD_LOCATION_NAME!,
   shutdownDelayMs: parseInt(process.env.GAMESERVER_SHUTDOWN_DELAY_MS!) || 0
 }
@@ -338,7 +338,7 @@ const config = {
     tcpPort: process.env.KUBERNETES_PORT_443_TCP_PORT!
   },
   noSSL: process.env.NOSSL === 'true',
-  localBuild: process.env.LOCAL_BUILD === 'true'
+  localBuild: process.env.VITE_LOCAL_BUILD === 'true'
 }
 
 chargebeeInst.configure({

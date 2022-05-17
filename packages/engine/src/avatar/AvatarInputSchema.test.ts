@@ -6,9 +6,9 @@ import { TargetCameraRotationComponent } from '../camera/components/TargetCamera
 import { LifecycleValue } from '../common/enums/LifecycleValue'
 import { NumericalType } from '../common/types/NumericalTypes'
 import { Engine } from '../ecs/classes/Engine'
-import { createWorld } from '../ecs/classes/World'
 import { addComponent, getComponent } from '../ecs/functions/ComponentFunctions'
 import { createEntity } from '../ecs/functions/EntityFunctions'
+import { createEngine } from '../initializeEngine'
 import { InputType } from '../input/enums/InputType'
 import { VectorSpringSimulator } from '../physics/classes/springs/VectorSpringSimulator'
 import { CollisionGroups } from '../physics/enums/CollisionGroups'
@@ -21,53 +21,45 @@ import {
 import { AvatarControllerComponent } from './components/AvatarControllerComponent'
 
 describe('avatarInputSchema', () => {
-  let world
-
   beforeEach(async () => {
-    world = createWorld()
-    Engine.currentWorld = world
+    createEngine()
+    delete (globalThis as any).PhysX
+    const world = Engine.instance.currentWorld
     await world.physics.createScene()
   })
 
   it('check fixedCameraBehindAvatar', () => {
+    const world = Engine.instance.currentWorld
     const entity = createEntity(world)
 
     const follower = addComponent(entity, FollowCameraComponent, FollowCameraDefaultValues)
     const firstValue = follower.locked
-    fixedCameraBehindAvatar(
-      entity,
-      'Test',
-      {
-        type: InputType.ONEDIM,
-        value: [1] as NumericalType,
-        lifecycleState: LifecycleValue.Started
-      },
-      Engine.currentWorld.delta
-    )
+    fixedCameraBehindAvatar(entity, 'Test', {
+      type: InputType.ONEDIM,
+      value: [1] as NumericalType,
+      lifecycleState: LifecycleValue.Started
+    })
 
     assert(firstValue === !follower.locked)
   })
 
   it('check switchShoulderSide', () => {
+    const world = Engine.instance.currentWorld
     const entity = createEntity(world)
 
     const follower = addComponent(entity, FollowCameraComponent, FollowCameraDefaultValues)
     const firstValue = follower.shoulderSide
-    switchShoulderSide(
-      entity,
-      'Test',
-      {
-        type: InputType.ONEDIM,
-        value: [1] as NumericalType,
-        lifecycleState: LifecycleValue.Started
-      },
-      Engine.currentWorld.delta
-    )
+    switchShoulderSide(entity, 'Test', {
+      type: InputType.ONEDIM,
+      value: [1] as NumericalType,
+      lifecycleState: LifecycleValue.Started
+    })
 
     assert(firstValue === !follower.shoulderSide)
   })
 
   it('check setTargetCameraRotation', () => {
+    const world = Engine.instance.currentWorld
     const entity = createEntity(world)
 
     const phi = 5
@@ -81,6 +73,7 @@ describe('avatarInputSchema', () => {
   })
 
   it('check setTargetCameraRotation with having the component already', () => {
+    const world = Engine.instance.currentWorld
     const entity = createEntity(world)
 
     const tcr = addComponent(entity, TargetCameraRotationComponent, {
@@ -101,7 +94,8 @@ describe('avatarInputSchema', () => {
   })
 
   it('check setWalking', async () => {
-    await Engine.currentWorld.physics.createScene({ verbose: true })
+    const world = Engine.instance.currentWorld
+    await Engine.instance.currentWorld.physics.createScene({ verbose: true })
     const entity = createEntity(world)
 
     const controller = world.physics.createController({
@@ -131,26 +125,24 @@ describe('avatarInputSchema', () => {
         0,
         0
       ),
+      currentSpeed: 0,
+      speedVelocity: { value: 0 },
       collisions: [false, false, false],
       movementEnabled: true,
       isJumping: false,
       isWalking: false,
+      isInAir: false,
       localMovementDirection: new Vector3(),
       velocitySimulator
     })
 
     const firstValue = c.isWalking
 
-    toggleRunning(
-      entity,
-      'Test',
-      {
-        type: InputType.ONEDIM,
-        value: [1] as NumericalType,
-        lifecycleState: LifecycleValue.Started
-      },
-      Engine.currentWorld.delta
-    )
+    toggleRunning(entity, 'Test', {
+      type: InputType.ONEDIM,
+      value: [1] as NumericalType,
+      lifecycleState: LifecycleValue.Started
+    })
 
     assert(firstValue === !c.isWalking)
   })

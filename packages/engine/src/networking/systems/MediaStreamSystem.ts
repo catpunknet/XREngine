@@ -1,20 +1,34 @@
 import { ChannelType } from '@xrengine/common/src/interfaces/Channel'
+import { defineAction, dispatchAction } from '@xrengine/hyperflux'
 
 import { isClient } from '../../common/functions/isClient'
+import { matches } from '../../common/functions/MatchesUtils'
 import { Engine } from '../../ecs/classes/Engine'
-import { EngineEvents } from '../../ecs/classes/EngineEvents'
-import { World } from '../../ecs/classes/World'
 import { Network } from '../classes/Network'
 import { localAudioConstraints, localVideoConstraints } from '../constants/VideoConstants'
 import { getNearbyUsers, NearbyUser } from '../functions/getNearbyUsers'
 
 /** System class for media streaming. */
 export class MediaStreams {
-  static EVENTS = {
-    TRIGGER_REQUEST_CURRENT_PRODUCERS: 'NETWORK_TRANSPORT_EVENT_REQUEST_CURRENT_PRODUCERS',
-    TRIGGER_UPDATE_CONSUMERS: 'NETWORK_TRANSPORT_EVENT_UPDATE_CONSUMERS',
-    CLOSE_CONSUMER: 'NETWORK_TRANSPORT_EVENT_CLOSE_CONSUMER',
-    UPDATE_NEARBY_LAYER_USERS: 'NETWORK_TRANSPORT_EVENT_UPDATE_NEARBY_LAYER_USERS'
+  static actions = {
+    triggerRequestCurrentProducers: defineAction({
+      store: 'ENGINE',
+      type: 'NETWORK_TRANSPORT_EVENT_REQUEST_CURRENT_PRODUCERS' as const,
+      userIds: matches.any
+    }),
+    triggerUpdateConsumers: defineAction({
+      store: 'ENGINE',
+      type: 'NETWORK_TRANSPORT_EVENT_UPDATE_CONSUMERS' as const
+    }),
+    closeConsumer: defineAction({
+      store: 'ENGINE',
+      type: 'NETWORK_TRANSPORT_EVENT_CLOSE_CONSUMER' as const,
+      consumer: matches.any
+    }),
+    updateNearbyLayerUsers: defineAction({
+      store: 'ENGINE',
+      type: 'NETWORK_TRANSPORT_EVENT_UPDATE_NEARBY_LAYER_USERS' as const
+    })
   }
   public static instance = new MediaStreams()
 
@@ -51,10 +65,6 @@ export class MediaStreams {
   public screenShareAudioPaused = false
   /** Whether the component is initialized or not. */
   public initialized = false
-  /** Current channel type */
-  public channelType: ChannelType = null!
-  /** Current channel ID */
-  public channelId: string = null!
 
   public nearbyLayerUsers = [] as NearbyUser[]
 
@@ -303,13 +313,14 @@ export class MediaStreams {
 }
 
 export const updateNearbyAvatars = () => {
-  MediaStreams.instance.nearbyLayerUsers = getNearbyUsers(Engine.userId)
+  MediaStreams.instance.nearbyLayerUsers = getNearbyUsers(Engine.instance.userId)
   if (!MediaStreams.instance.nearbyLayerUsers.length) return
   const nearbyUserIds = MediaStreams.instance.nearbyLayerUsers.map((user) => user.id)
-  EngineEvents.instance.dispatchEvent({ type: MediaStreams.EVENTS.UPDATE_NEARBY_LAYER_USERS })
+
+  dispatchAction(Engine.instance.store, MediaStreams.actions.updateNearbyLayerUsers())
   MediaStreams.instance.consumers.forEach((consumer) => {
     if (!nearbyUserIds.includes(consumer._appData.peerId)) {
-      EngineEvents.instance.dispatchEvent({ type: MediaStreams.EVENTS.CLOSE_CONSUMER, consumer })
+      dispatchAction(Engine.instance.store, MediaStreams.actions.closeConsumer({ consumer }))
     }
   })
 }
@@ -322,9 +333,10 @@ export default async function MediaStreamSystem() {
   let executeInProgress = false
 
   return () => {
-    if (Network.instance.mediasoupOperationQueue.getBufferLength() > 0 && !executeInProgress) {
+    const networkTransport = Network.instance.getTransport('media')
+    if (networkTransport.mediasoupOperationQueue.getBufferLength() > 0 && !executeInProgress) {
       executeInProgress = true
-      const buffer = Network.instance.mediasoupOperationQueue.pop() as any
+      const buffer = networkTransport.mediasoupOperationQueue.pop() as any
       if (buffer.object && buffer.object.closed !== true && buffer.object._closed !== true) {
         try {
           if (buffer.action === 'resume') buffer.object.resume()

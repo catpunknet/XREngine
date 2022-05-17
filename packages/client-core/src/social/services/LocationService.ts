@@ -1,3 +1,4 @@
+import { Paginated } from '@feathersjs/feathers'
 import { createState, useState } from '@speigg/hookstate'
 
 import { Location, LocationSeed } from '@xrengine/common/src/interfaces/Location'
@@ -9,6 +10,7 @@ import { store, useDispatch } from '../../store'
 
 //State
 const state = createState({
+  locationName: null! as string,
   currentLocation: {
     location: LocationSeed as Location,
     bannedUsers: [] as UserId[],
@@ -23,6 +25,10 @@ const state = createState({
 store.receptors.push((action: LocationActionType): any => {
   state.batch((s) => {
     switch (action.type) {
+      case 'LOCATION_NAME_SET':
+        return s.merge({
+          locationName: action.locationName
+        })
       case 'FETCH_CURRENT_LOCATION':
         return s.merge({
           fetchingCurrentLocation: true,
@@ -95,17 +101,13 @@ export const LocationService = {
   getLocationByName: async (locationName: string) => {
     const dispatch = useDispatch()
     dispatch(LocationAction.fetchingCurrentSocialLocation())
-    const locationResult = await client
-      .service('location')
-      .find({
-        query: {
-          slugifiedName: locationName,
-          joinableLocations: true
-        }
-      })
-      .catch((error) => {
-        console.log("Couldn't get location by name", error)
-      })
+    const locationResult = (await client.service('location').find({
+      query: {
+        slugifiedName: locationName,
+        joinableLocations: true
+      }
+    })) as Paginated<Location>
+
     if (locationResult && locationResult.total > 0) {
       dispatch(LocationAction.socialLocationRetrieved(locationResult.data[0]))
     } else {
@@ -113,20 +115,17 @@ export const LocationService = {
     }
   },
   getLobby: async () => {
-    const lobbyResult = await client
-      .service('location')
-      .find({
-        query: {
-          isLobby: true,
-          $limit: 1
-        }
-      })
-      .catch((error) => {
-        console.log("Couldn't get Lobby", error)
-      })
+    const lobbyResult = (await client.service('location').find({
+      query: {
+        isLobby: true,
+        $limit: 1
+      }
+    })) as Paginated<Location>
 
     if (lobbyResult && lobbyResult.total > 0) {
       return lobbyResult.data[0]
+    } else {
+      return null
     }
   },
   banUserFromLocation: async (userId: string, locationId: string) => {
@@ -145,10 +144,16 @@ export const LocationService = {
 
 //Action
 export const LocationAction = {
+  setLocationName: (locationName: string) => {
+    return {
+      type: 'LOCATION_NAME_SET' as const,
+      locationName
+    }
+  },
   socialLocationRetrieved: (location: Location) => {
     return {
       type: 'LOCATION_RETRIEVED' as const,
-      location: location
+      location
     }
   },
   socialLocationBanCreated: () => {

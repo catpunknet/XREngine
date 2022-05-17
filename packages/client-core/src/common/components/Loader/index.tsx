@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineService'
+import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
 
 import { GeneralStateList } from '../../services/AppService'
 import { useAppState } from '../../services/AppService'
-import styles from './Loader.module.scss'
-import LottieLoader from './LottieLoader'
+import styles from './loader.module.scss'
 
 interface Props {
   //Loader?: any
